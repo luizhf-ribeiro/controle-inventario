@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Componentes | Controle de Inventário</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style> body { font-family: 'Inter', system_ui, sans-serif; } </style>
+</head>
+<body class="bg-gray-100 flex h-screen">
+
+    <!-- Sidebar -->
+    <div class="w-64 bg-[#1a2537] text-white flex flex-col">
+        <div class="p-6 border-b border-[#2a3a50]">
+            <div class="text-2xl font-bold">Hepta / Cetesb</div>
+            <div class="text-sm text-blue-400 mt-1">Controle de Inventário</div>
+        </div>
+        <nav class="flex-1 p-4">
+            <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 hover:bg-[#2a3a50] rounded-xl mb-1"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a href="equipamentos.html" class="flex items-center gap-3 px-4 py-3 hover:bg-[#2a3a50] rounded-xl mb-1"><i class="fas fa-laptop"></i> Equipamentos</a>
+            <a href="perifericos.html" class="flex items-center gap-3 px-4 py-3 hover:bg-[#2a3a50] rounded-xl mb-1"><i class="fas fa-mouse"></i> Periféricos</a>
+            <a href="componentes.html" class="flex items-center gap-3 px-4 py-3 bg-[#2a3a50] rounded-xl mb-1"><i class="fas fa-microchip"></i> Componentes</a>
+            <a href="usuarios.html" class="flex items-center gap-3 px-4 py-3 hover:bg-[#2a3a50] rounded-xl"><i class="fas fa-users"></i> Usuários</a>
+        </nav>
+        <div class="p-4">
+            <button onclick="logout()" class="w-full py-3 bg-red-600 hover:bg-red-700 rounded-2xl font-medium">Sair</button>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <header class="bg-white p-6 flex justify-between items-center shadow-sm">
+            <h1 class="text-3xl font-semibold">Componentes</h1>
+            <div class="flex items-center gap-4">
+                <div id="adminButtons" class="flex gap-3"></div>
+                <div id="userHeader" class="flex items-center gap-3 pl-6 border-l border-gray-200"></div>
+            </div>
+        </header>
+
+        <div class="p-8 overflow-auto">
+            <div class="bg-white p-4 rounded-2xl shadow mb-6 flex gap-4">
+                <input type="text" id="filtroBusca" placeholder="Buscar por tipo, marca ou usuário..." class="flex-1 px-4 py-3 border rounded-xl">
+                <button onclick="carregarTabela()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium">Filtrar</button>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left">Tipo de Componente</th>
+                            <th class="px-6 py-4 text-left">Marca / Modelo</th>
+                            <th class="px-6 py-4 text-left">Usuário</th>
+                            <th class="px-6 py-4 text-left">Status</th>
+                            <th class="px-6 py-4 text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaComponentes" class="divide-y"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modalCadastro" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-lg">
+            <h2 class="text-2xl font-semibold mb-6" id="modalTitle">Novo Componente</h2>
+            <form id="formComponente">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm mb-1">Tipo de Componente</label>
+                        <input type="text" id="tipo" class="w-full p-3 border rounded-xl" placeholder="Ex: HD, RAM, Placa de Vídeo" required>
+                    </div>
+                    <div><label class="block text-sm mb-1">Marca</label><input type="text" id="marca" class="w-full p-3 border rounded-xl" required></div>
+                    <div><label class="block text-sm mb-1">Modelo</label><input type="text" id="modelo" class="w-full p-3 border rounded-xl" required></div>
+                    <div><label class="block text-sm mb-1">Patrimônio</label><input type="text" id="patrimonio" class="w-full p-3 border rounded-xl"></div>
+                    <div class="col-span-2">
+                        <label class="block text-sm mb-1">Status</label>
+                        <select id="status" class="w-full p-3 border rounded-xl">
+                            <option value="Disponível">Disponível</option>
+                            <option value="Em uso">Em uso</option>
+                            <option value="Manutenção">Em Manutenção</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm mb-1">Usuário Responsável</label>
+                        <input type="text" id="usuario" class="w-full p-3 border rounded-xl">
+                    </div>
+                </div>
+                <div class="flex gap-4 mt-8">
+                    <button type="button" onclick="fecharModal()" class="flex-1 py-4 border rounded-2xl">Cancelar</button>
+                    <button type="submit" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl" id="btnSalvar">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <input type="file" id="importCSV" accept=".csv" class="hidden" onchange="importarCSV(event)">
+
+    <script>
+        let editandoId = null;
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Usuário","cargo":"Analista"}');
+
+        function updateUserHeader() {
+            document.getElementById('userHeader').innerHTML = `
+                <i class="fas fa-bell text-2xl"></i>
+                <div>
+                    <p class="font-medium">${currentUser.nome}</p>
+                    <p class="text-sm text-gray-500">${currentUser.cargo}</p>
+                </div>
+            `;
+        }
+
+        function showAdminButtons() {
+            const container = document.getElementById('adminButtons');
+            container.innerHTML = currentUser.cargo === 'Administrador' ? `
+                <button onclick="exportarCSV()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-2xl font-medium flex items-center gap-2">
+                    <i class="fas fa-download"></i> Exportar CSV
+                </button>
+                <button onclick="document.getElementById('importCSV').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-medium flex items-center gap-2">
+                    <i class="fas fa-upload"></i> Importar CSV
+                </button>
+                <button onclick="abrirModalCadastro()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-medium flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Novo Componente
+                </button>
+            ` : '';
+        }
+
+        async function carregarTabela() {
+            const busca = document.getElementById('filtroBusca').value.toLowerCase().trim();
+            const res = await fetch('/api/componentes');
+            let itens = await res.json();
+
+            if (busca) {
+                itens = itens.filter(i => 
+                    (i.tipo || '').toLowerCase().includes(busca) ||
+                    (i.marca || '').toLowerCase().includes(busca) ||
+                    (i.modelo || '').toLowerCase().includes(busca)
+                );
+            }
+
+            document.getElementById('tabelaComponentes').innerHTML = itens.map(i => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">${i.tipo}</td>
+                    <td class="px-6 py-4">${i.marca} ${i.modelo}</td>
+                    <td class="px-6 py-4">${i.usuarioResponsavel || '-'}</td>
+                    <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs ${i.status === 'Disponível' ? 'bg-green-100 text-green-700' : i.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">${i.status}</span></td>
+                    <td class="px-6 py-4 text-center">
+                        ${currentUser.cargo === 'Administrador' ? `
+                            <button onclick="editar(${i.id})" class="text-blue-600 hover:text-blue-800 mr-4"><i class="fas fa-edit"></i></button>
+                            <button onclick="excluir(${i.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="text-center py-12 text-gray-500">Nenhum componente encontrado.</td></tr>';
+        }
+
+        document.getElementById('formComponente').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (currentUser.cargo !== 'Administrador') return alert("Apenas Administradores podem alterar.");
+
+            const data = {
+                tipo: document.getElementById('tipo').value,
+                marca: document.getElementById('marca').value,
+                modelo: document.getElementById('modelo').value,
+                patrimonio: document.getElementById('patrimonio').value,
+                status: document.getElementById('status').value,
+                usuarioResponsavel: document.getElementById('usuario').value
+            };
+
+            if (editandoId) {
+                await fetch(`/api/componentes/${editandoId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            } else {
+                await fetch('/api/componentes', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            }
+
+            alert("✅ Salvo com sucesso!");
+            fecharModal();
+            carregarTabela();
+        });
+
+        async function excluir(id) {
+            if (currentUser.cargo !== 'Administrador') return;
+            if (confirm("Excluir este componente?")) {
+                await fetch(`/api/componentes/${id}`, { method: 'DELETE' });
+                carregarTabela();
+            }
+        }
+
+        function editar(id) {
+            if (currentUser.cargo !== 'Administrador') return;
+            editandoId = id;
+            document.getElementById('modalTitle').textContent = "Editar Componente";
+            document.getElementById('btnSalvar').textContent = "Atualizar";
+            document.getElementById('modalCadastro').classList.remove('hidden');
+        }
+
+        function abrirModalCadastro() {
+            if (currentUser.cargo !== 'Administrador') return alert("Apenas Administradores podem cadastrar.");
+            editandoId = null;
+            document.getElementById('modalTitle').textContent = "Novo Componente";
+            document.getElementById('btnSalvar').textContent = "Salvar";
+            document.getElementById('modalCadastro').classList.remove('hidden');
+        }
+
+        function fecharModal() {
+            document.getElementById('modalCadastro').classList.add('hidden');
+        }
+
+        function exportarCSV() {
+            fetch('/api/componentes').then(r => r.json()).then(data => {
+                let csv = "Tipo,Marca,Modelo,Patrimonio,Usuario,Status\n";
+                data.forEach(i => csv += `"${i.tipo}","${i.marca}","${i.modelo}","${i.patrimonio || ''}","${i.usuarioResponsavel || ''}","${i.status}"\n`);
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'componentes.csv';
+                a.click();
+            });
+        }
+
+        function importarCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split('\n');
+                let count = 0;
+                for (let line of lines.slice(1)) {
+                    if (!line.trim()) continue;
+                    const [tipo, marca, modelo, patrimonio, usuario, status] = line.split(',').map(s => s.replace(/"/g,'').trim());
+                    if (tipo) {
+                        await fetch('/api/componentes', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({tipo, marca, modelo, patrimonio, usuarioResponsavel: usuario, status: status || 'Disponível'})
+                        });
+                        count++;
+                    }
+                }
+                alert(`✅ ${count} componentes importados!`);
+                carregarTabela();
+            };
+            reader.readAsText(file);
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "index.html";
+        }
+
+        window.onload = () => {
+            updateUserHeader();
+            showAdminButtons();
+            carregarTabela();
+        };
+    </script>
+</body>
+</html>
