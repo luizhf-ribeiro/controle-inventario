@@ -2,17 +2,17 @@ FROM node:20
 
 WORKDIR /usr/src/app
 
-# Copia arquivos de dependência
 COPY package*.json ./
 
-# Instala dependências
 RUN npm install
 
-# Copia o restante do código
 COPY . .
 
-# Expõe a porta
+# Comando para compilar o TypeScript para JavaScript
+RUN npm run build
+
+# O Render define a porta automaticamente, mas deixamos a 3000 como padrão
 EXPOSE 3000
 
-# Comando para rodar em desenvolvimento
-CMD ["npm", "run", "dev"]
+# Comando para rodar em PRODUÇÃO (apontando para a pasta dist)
+CMD ["node", "dist/index.js"]
