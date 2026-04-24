@@ -38,9 +38,22 @@
         </header>
 
         <div class="p-8 overflow-auto">
-            <div class="bg-white p-4 rounded-2xl shadow mb-6 flex gap-4">
-                <input type="text" id="filtroBusca" placeholder="Buscar por tipo, marca ou usuário..." class="flex-1 px-4 py-3 border rounded-xl">
-                <button onclick="carregarTabela()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium">Filtrar</button>
+            <!-- FILTROS AJUSTADOS -->
+            <div class="bg-white p-4 rounded-2xl shadow mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" id="filtroTipo" placeholder="Tipo (ex: RAM, HD...)" 
+                       class="px-4 py-3 border rounded-xl">
+                <input type="text" id="filtroNome" placeholder="Usuário Responsável" 
+                       class="px-4 py-3 border rounded-xl">
+                <select id="filtroStatus" class="px-4 py-3 border rounded-xl">
+                    <option value="">Todos os Status</option>
+                    <option value="Disponível">Disponível</option>
+                    <option value="Em uso">Em uso</option>
+                    <option value="Manutenção">Em Manutenção</option>
+                </select>
+                <button onclick="carregarTabela()" 
+                        class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-blue-700">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
             </div>
 
             <div class="bg-white rounded-3xl shadow overflow-hidden">
@@ -125,35 +138,53 @@
             ` : '';
         }
 
+        // ====================== FUNÇÃO PRINCIPAL COM FILTROS ======================
         async function carregarTabela() {
-            const busca = document.getElementById('filtroBusca').value.toLowerCase().trim();
-            const res = await fetch('/api/componentes');
-            let itens = await res.json();
+            const tipo = document.getElementById('filtroTipo').value.trim();
+            const nome = document.getElementById('filtroNome').value.trim();
+            const status = document.getElementById('filtroStatus').value;
 
-            if (busca) {
-                itens = itens.filter(i => 
-                    (i.tipo || '').toLowerCase().includes(busca) ||
-                    (i.marca || '').toLowerCase().includes(busca) ||
-                    (i.modelo || '').toLowerCase().includes(busca)
-                );
+            let url = '/api/componentes';
+            const params = new URLSearchParams();
+
+            if (tipo) params.append('tipo', tipo);
+            if (nome) params.append('nome', nome);
+            if (status) params.append('status', status);
+
+            if (params.toString()) url += '?' + params.toString();
+
+            try {
+                const res = await fetch(url);
+                const itens = await res.json();
+
+                document.getElementById('tabelaComponentes').innerHTML = itens.map(i => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">${i.tipo}</td>
+                        <td class="px-6 py-4">${i.marca} ${i.modelo}</td>
+                        <td class="px-6 py-4">${i.usuarioResponsavel || '-'}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-full text-xs 
+                                ${i.status === 'Disponível' ? 'bg-green-100 text-green-700' : 
+                                  i.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : 
+                                  'bg-red-100 text-red-700'}">
+                                ${i.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            ${currentUser.cargo === 'Administrador' ? `
+                                <button onclick="editar(${i.id})" class="text-blue-600 hover:text-blue-800 mr-4"><i class="fas fa-edit"></i></button>
+                                <button onclick="excluir(${i.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="text-center py-12 text-gray-500">Nenhum componente encontrado.</td></tr>';
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao carregar componentes");
             }
-
-            document.getElementById('tabelaComponentes').innerHTML = itens.map(i => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4">${i.tipo}</td>
-                    <td class="px-6 py-4">${i.marca} ${i.modelo}</td>
-                    <td class="px-6 py-4">${i.usuarioResponsavel || '-'}</td>
-                    <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs ${i.status === 'Disponível' ? 'bg-green-100 text-green-700' : i.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">${i.status}</span></td>
-                    <td class="px-6 py-4 text-center">
-                        ${currentUser.cargo === 'Administrador' ? `
-                            <button onclick="editar(${i.id})" class="text-blue-600 hover:text-blue-800 mr-4"><i class="fas fa-edit"></i></button>
-                            <button onclick="excluir(${i.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
-                        ` : ''}
-                    </td>
-                </tr>
-            `).join('') || '<tr><td colspan="5" class="text-center py-12 text-gray-500">Nenhum componente encontrado.</td></tr>';
         }
 
+        // Restante do código mantido
         document.getElementById('formComponente').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (currentUser.cargo !== 'Administrador') return alert("Apenas Administradores podem alterar.");

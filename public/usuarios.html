@@ -38,9 +38,14 @@
         </header>
 
         <div class="p-8 overflow-auto">
+            <!-- FILTRO AJUSTADO -->
             <div class="bg-white p-4 rounded-2xl shadow mb-6 flex gap-4">
-                <input type="text" id="filtroBusca" placeholder="Buscar por nome ou email..." class="flex-1 px-4 py-3 border rounded-xl">
-                <button onclick="carregarTabela()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium">Filtrar</button>
+                <input type="text" id="filtroNome" placeholder="Buscar por nome..." 
+                       class="flex-1 px-4 py-3 border rounded-xl">
+                <button onclick="carregarTabela()" 
+                        class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-blue-700">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
             </div>
 
             <div class="bg-white rounded-3xl shadow overflow-hidden">
@@ -106,32 +111,41 @@
             ` : '';
         }
 
+        // ====================== FUNÇÃO COM FILTRO NO BACKEND ======================
         async function carregarTabela() {
-            const busca = document.getElementById('filtroBusca').value.toLowerCase().trim();
-            const res = await fetch('/api/usuarios');
-            let usuarios = await res.json();
+            const nome = document.getElementById('filtroNome').value.trim();
 
-            if (busca) {
-                usuarios = usuarios.filter(u => 
-                    (u.nome || '').toLowerCase().includes(busca) ||
-                    (u.email || '').toLowerCase().includes(busca)
-                );
+            let url = '/api/usuarios';
+            if (nome) {
+                url += `?nome=${encodeURIComponent(nome)}`;
             }
 
-            document.getElementById('tabelaUsuarios').innerHTML = usuarios.map(u => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4">${u.nome}</td>
-                    <td class="px-6 py-4 font-mono">${u.email}</td>
-                    <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs ${u.cargo === 'Administrador' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}">${u.cargo}</span></td>
-                    <td class="px-6 py-4"><span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">Ativo</span></td>
-                    <td class="px-6 py-4 text-center">
-                        ${currentUser.cargo === 'Administrador' ? `
-                            <button onclick="editar(${u.id})" class="text-blue-600 hover:text-blue-800 mr-4"><i class="fas fa-edit"></i></button>
-                            <button onclick="excluir(${u.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
-                        ` : ''}
-                    </td>
-                </tr>
-            `).join('') || '<tr><td colspan="5" class="text-center py-12 text-gray-500">Nenhum usuário encontrado.</td></tr>';
+            try {
+                const res = await fetch(url);
+                const usuarios = await res.json();
+
+                document.getElementById('tabelaUsuarios').innerHTML = usuarios.map(u => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">${u.nome}</td>
+                        <td class="px-6 py-4 font-mono">${u.email}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-full text-xs ${u.cargo === 'Administrador' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}">
+                                ${u.cargo}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4"><span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">Ativo</span></td>
+                        <td class="px-6 py-4 text-center">
+                            ${currentUser.cargo === 'Administrador' ? `
+                                <button onclick="editar(${u.id})" class="text-blue-600 hover:text-blue-800 mr-4"><i class="fas fa-edit"></i></button>
+                                <button onclick="excluir(${u.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="text-center py-12 text-gray-500">Nenhum usuário encontrado.</td></tr>';
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao carregar usuários");
+            }
         }
 
         document.getElementById('formUsuario').addEventListener('submit', async (e) => {

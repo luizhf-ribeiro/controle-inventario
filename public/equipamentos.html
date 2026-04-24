@@ -32,7 +32,6 @@
         <header class="bg-white p-6 flex justify-between items-center shadow-sm">
             <h1 class="text-3xl font-semibold">Equipamentos</h1>
             
-            <!-- Botões Admin + Perfil do Usuário -->
             <div class="flex items-center gap-4">
                 <div id="adminButtons" class="flex gap-3"></div>
                 <div id="userHeader" class="flex items-center gap-3 pl-6 border-l border-gray-200"></div>
@@ -40,9 +39,22 @@
         </header>
 
         <div class="p-8 overflow-auto">
-            <div class="bg-white p-4 rounded-2xl shadow mb-6 flex gap-4">
-                <input type="text" id="filtroBusca" placeholder="Buscar por patrimônio, marca ou modelo..." class="flex-1 px-4 py-3 border rounded-xl">
-                <button onclick="carregarTabela()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium">Filtrar</button>
+            <!-- FILTROS AJUSTADOS -->
+            <div class="bg-white p-4 rounded-2xl shadow mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" id="filtroTipo" placeholder="Tipo (Notebook, Desktop...)" 
+                       class="px-4 py-3 border rounded-xl">
+                <input type="text" id="filtroNome" placeholder="Usuário Responsável" 
+                       class="px-4 py-3 border rounded-xl">
+                <select id="filtroStatus" class="px-4 py-3 border rounded-xl">
+                    <option value="">Todos os Status</option>
+                    <option value="Disponível">Disponível</option>
+                    <option value="Em uso">Em uso</option>
+                    <option value="Manutenção">Em Manutenção</option>
+                </select>
+                <button onclick="carregarTabela()" 
+                        class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-blue-700">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
             </div>
 
             <div class="bg-white rounded-3xl shadow overflow-hidden">
@@ -63,7 +75,7 @@
         </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal (mantido igual) -->
     <div id="modalCadastro" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
         <div class="bg-white rounded-3xl p-8 w-full max-w-lg">
             <h2 class="text-2xl font-semibold mb-6" id="modalTitle">Novo Equipamento</h2>
@@ -135,37 +147,54 @@
             }
         }
 
+        // ====================== FUNÇÃO PRINCIPAL DE FILTRO ======================
         async function carregarTabela() {
-            const busca = document.getElementById('filtroBusca').value.toLowerCase().trim();
-            const res = await fetch('/api/equipamentos');
-            let ativos = await res.json();
+            const tipo = document.getElementById('filtroTipo').value.trim();
+            const nome = document.getElementById('filtroNome').value.trim();
+            const status = document.getElementById('filtroStatus').value;
 
-            if (busca) {
-                ativos = ativos.filter(a => 
-                    (a.patrimonio || '').toLowerCase().includes(busca) ||
-                    (a.marca || '').toLowerCase().includes(busca) ||
-                    (a.modelo || '').toLowerCase().includes(busca)
-                );
+            let url = '/api/equipamentos';
+            const params = new URLSearchParams();
+
+            if (tipo) params.append('tipo', tipo);
+            if (nome) params.append('nome', nome);
+            if (status) params.append('status', status);
+
+            if (params.toString()) url += '?' + params.toString();
+
+            try {
+                const res = await fetch(url);
+                const ativos = await res.json();
+
+                document.getElementById('tabelaEquipamentos').innerHTML = ativos.map(a => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium">${a.patrimonio}</td>
+                        <td class="px-6 py-4">${a.tipo}</td>
+                        <td class="px-6 py-4">${a.marca} ${a.modelo}</td>
+                        <td class="px-6 py-4">${a.usuarioResponsavel || '-'}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-full text-xs 
+                                ${a.status === 'Disponível' ? 'bg-green-100 text-green-700' : 
+                                  a.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : 
+                                  'bg-red-100 text-red-700'}">
+                                ${a.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            ${currentUser.cargo === 'Administrador' ? `
+                                <button onclick="editar(${a.id})" class="text-blue-600 hover:text-blue-800 mr-4"><i class="fas fa-edit"></i></button>
+                                <button onclick="excluir(${a.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="6" class="text-center py-12 text-gray-500">Nenhum equipamento encontrado.</td></tr>';
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao carregar equipamentos");
             }
-
-            document.getElementById('tabelaEquipamentos').innerHTML = ativos.map(a => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 font-medium">${a.patrimonio}</td>
-                    <td class="px-6 py-4">${a.tipo}</td>
-                    <td class="px-6 py-4">${a.marca} ${a.modelo}</td>
-                    <td class="px-6 py-4">${a.usuarioResponsavel || '-'}</td>
-                    <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs ${a.status === 'Disponível' ? 'bg-green-100 text-green-700' : a.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">${a.status}</span></td>
-                    <td class="px-6 py-4 text-center">
-                        ${currentUser.cargo === 'Administrador' ? `
-                            <button onclick="editar(${a.id})" class="text-blue-600 hover:text-blue-800 mr-4"><i class="fas fa-edit"></i></button>
-                            <button onclick="excluir(${a.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
-                        ` : ''}
-                    </td>
-                </tr>
-            `).join('') || '<tr><td colspan="6" class="text-center py-12 text-gray-500">Nenhum equipamento encontrado.</td></tr>';
         }
 
-        // Formulário, excluir, editar, exportar, importar (mantidos)
+        // Restante do código (formulário, modal, etc.) mantido igual
         document.getElementById('formEquipamento').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (currentUser.cargo !== 'Administrador') return alert("Apenas Administradores podem alterar.");
@@ -181,9 +210,17 @@
             };
 
             if (editandoId) {
-                await fetch(`/api/equipamentos/${editandoId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+                await fetch(`/api/equipamentos/${editandoId}`, { 
+                    method: 'PUT', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify(data) 
+                });
             } else {
-                await fetch('/api/equipamentos', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+                await fetch('/api/equipamentos', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify(data) 
+                });
             }
 
             alert("✅ Salvo com sucesso!");
