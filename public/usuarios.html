@@ -38,12 +38,21 @@
         </header>
 
         <div class="p-8 overflow-auto">
-            <!-- FILTRO AJUSTADO -->
-            <div class="bg-white p-4 rounded-2xl shadow mb-6 flex gap-4">
-                <input type="text" id="filtroNome" placeholder="Buscar por nome..." 
-                       class="flex-1 px-4 py-3 border rounded-xl">
+            <!-- FILTROS COMPLETOS -->
+            <div class="bg-white p-4 rounded-2xl shadow mb-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+                <input type="text" id="filtroNome" placeholder="Nome" class="px-4 py-3 border rounded-xl">
+                <input type="text" id="filtroEmail" placeholder="E-mail" class="px-4 py-3 border rounded-xl">
+                <select id="filtroCargo" class="px-4 py-3 border rounded-xl">
+                    <option value="">Todos os Cargos</option>
+                    <option value="Analista">Analista</option>
+                    <option value="Administrador">Administrador</option>
+                </select>
+                <select id="filtroStatus" class="px-4 py-3 border rounded-xl">
+                    <option value="">Status</option>
+                    <option value="Ativo">Ativo</option>
+                </select>
                 <button onclick="carregarTabela()" 
-                        class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-blue-700">
+                        class="bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 flex items-center justify-center gap-2">
                     <i class="fas fa-filter"></i> Filtrar
                 </button>
             </div>
@@ -111,14 +120,21 @@
             ` : '';
         }
 
-        // ====================== FUNÇÃO COM FILTRO NO BACKEND ======================
         async function carregarTabela() {
             const nome = document.getElementById('filtroNome').value.trim();
+            const email = document.getElementById('filtroEmail').value.trim();
+            const cargo = document.getElementById('filtroCargo').value;
+            const status = document.getElementById('filtroStatus').value;
 
             let url = '/api/usuarios';
-            if (nome) {
-                url += `?nome=${encodeURIComponent(nome)}`;
-            }
+            const params = new URLSearchParams();
+
+            if (nome) params.append('nome', nome);
+            if (email) params.append('email', email);
+            if (cargo) params.append('cargo', cargo);
+            // Status não está implementado no backend ainda, mas mantemos para futuro
+
+            if (params.toString()) url += '?' + params.toString();
 
             try {
                 const res = await fetch(url);

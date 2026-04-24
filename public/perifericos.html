@@ -38,12 +38,12 @@
         </header>
 
         <div class="p-8 overflow-auto">
-            <!-- FILTROS AJUSTADOS -->
-            <div class="bg-white p-4 rounded-2xl shadow mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text" id="filtroTipo" placeholder="Tipo (ex: Mouse, Teclado...)" 
-                       class="px-4 py-3 border rounded-xl">
-                <input type="text" id="filtroNome" placeholder="Usuário Responsável" 
-                       class="px-4 py-3 border rounded-xl">
+            <!-- FILTROS COMPLETOS -->
+            <div class="bg-white p-4 rounded-2xl shadow mb-6 grid grid-cols-2 md:grid-cols-6 gap-3">
+                <input type="text" id="filtroTipo" placeholder="Tipo" class="px-4 py-3 border rounded-xl">
+                <input type="text" id="filtroMarca" placeholder="Marca" class="px-4 py-3 border rounded-xl">
+                <input type="text" id="filtroModelo" placeholder="Modelo" class="px-4 py-3 border rounded-xl">
+                <input type="text" id="filtroUsuario" placeholder="Usuário Responsável" class="px-4 py-3 border rounded-xl">
                 <select id="filtroStatus" class="px-4 py-3 border rounded-xl">
                     <option value="">Todos os Status</option>
                     <option value="Disponível">Disponível</option>
@@ -51,7 +51,7 @@
                     <option value="Manutenção">Em Manutenção</option>
                 </select>
                 <button onclick="carregarTabela()" 
-                        class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-blue-700">
+                        class="bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 flex items-center justify-center gap-2">
                     <i class="fas fa-filter"></i> Filtrar
                 </button>
             </div>
@@ -138,17 +138,20 @@
             ` : '';
         }
 
-        // ====================== FUNÇÃO PRINCIPAL COM FILTROS ======================
         async function carregarTabela() {
             const tipo = document.getElementById('filtroTipo').value.trim();
-            const nome = document.getElementById('filtroNome').value.trim();
+            const marca = document.getElementById('filtroMarca').value.trim();
+            const modelo = document.getElementById('filtroModelo').value.trim();
+            const usuario = document.getElementById('filtroUsuario').value.trim();
             const status = document.getElementById('filtroStatus').value;
 
             let url = '/api/perifericos';
             const params = new URLSearchParams();
 
             if (tipo) params.append('tipo', tipo);
-            if (nome) params.append('nome', nome);
+            if (marca) params.append('marca', marca);
+            if (modelo) params.append('modelo', modelo);
+            if (usuario) params.append('nome', usuario);
             if (status) params.append('status', status);
 
             if (params.toString()) url += '?' + params.toString();
@@ -184,7 +187,7 @@
             }
         }
 
-        // Restante do código mantido
+        // ==================== RESTANTE DO CÓDIGO (mantido intacto) ====================
         document.getElementById('formPeriferico').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (currentUser.cargo !== 'Administrador') return alert("Apenas Administradores podem alterar.");
