@@ -50,6 +50,7 @@
                     <option value="Disponível">Disponível</option>
                     <option value="Em uso">Em uso</option>
                     <option value="Manutenção">Em Manutenção</option>
+                    <option value="Offline">Offline</option>
                 </select>
                 <button onclick="carregarTabela()" 
                         class="bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 flex items-center justify-center gap-2">
@@ -75,7 +76,7 @@
         </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal com as novas opções -->
     <div id="modalCadastro" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
         <div class="bg-white rounded-3xl p-8 w-full max-w-lg">
             <h2 class="text-2xl font-semibold mb-6" id="modalTitle">Novo Equipamento</h2>
@@ -87,6 +88,7 @@
                             <option value="Notebook">Notebook</option>
                             <option value="Desktop">Desktop</option>
                             <option value="Monitor">Monitor</option>
+                            <option value="Impressora">Impressora</option>
                         </select>
                     </div>
                     <div><label class="block text-sm mb-1">Marca</label><input type="text" id="marca" class="w-full p-3 border rounded-xl" required></div>
@@ -99,6 +101,7 @@
                             <option value="Disponível">Disponível</option>
                             <option value="Em uso">Em uso</option>
                             <option value="Manutenção">Em Manutenção</option>
+                            <option value="Offline">Offline</option>
                         </select>
                     </div>
                     <div class="col-span-2">
@@ -181,7 +184,7 @@
                             <span class="px-3 py-1 rounded-full text-xs 
                                 ${a.status === 'Disponível' ? 'bg-green-100 text-green-700' : 
                                   a.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : 
-                                  'bg-red-100 text-red-700'}">
+                                  a.status === 'Manutenção' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">
                                 ${a.status}
                             </span>
                         </td>
@@ -199,7 +202,6 @@
             }
         }
 
-        // ==================== RESTANTE DO CÓDIGO (mantido) ====================
         document.getElementById('formEquipamento').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (currentUser.cargo !== 'Administrador') return alert("Apenas Administradores podem alterar.");
