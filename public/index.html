@@ -60,27 +60,37 @@
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const emailInput = document.getElementById('email').value.trim();
+        const passwordInput = document.getElementById('password').value;
 
-            if (!email || !password) {
-                alert("Preencha email e senha");
-                return;
+        if (!emailInput || !passwordInput) {
+            alert("Preencha email e senha");
+            return;
+        }
+
+        try {
+            // Busca a lista de usuários real do seu backend
+            const response = await fetch('/api/usuarios');
+            const usuarios = await response.json();
+
+            // Procura o usuário que bate com email e senha
+            const usuarioValido = usuarios.find(u => u.email === emailInput && u.senha === passwordInput);
+
+            if (usuarioValido) {
+                // SALVA OS DADOS REAIS DO BANCO (incluindo o cargo 'Administrador')
+                localStorage.setItem('currentUser', JSON.stringify(usuarioValido));
+                window.location.href = "dashboard.html";
+            } else {
+                alert("E-mail ou senha incorretos (Senha padrão: hepta123)");
             }
-
-            // Simulação de login
-            const userData = {
-                nome: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                email: email,
-                cargo: email.includes("luiz.ribeiro") || email.includes("admin") ? "Administrador" : "Analista"
-            };
-
-            localStorage.setItem('currentUser', JSON.stringify(userData));
-            window.location.href = "dashboard.html";
-        });
-    </script>
+        } catch (error) {
+            console.error("Erro ao fazer login:", error);
+            alert("Erro ao conectar com o servidor.");
+        }
+    });
+</script>
 </body>
 </html>
