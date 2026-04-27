@@ -132,13 +132,21 @@
             if (nome) params.append('nome', nome);
             if (email) params.append('email', email);
             if (cargo) params.append('cargo', cargo);
-            // Status não está implementado no backend ainda, mas mantemos para futuro
 
             if (params.toString()) url += '?' + params.toString();
 
             try {
                 const res = await fetch(url);
                 const usuarios = await res.json();
+
+                // AJUSTE PONTUAL: Sincroniza o LocalStorage se o usuário logado estiver na lista
+                const sessaoAtualizada = usuarios.find(u => u.email === currentUser.email);
+                if (sessaoAtualizada && sessaoAtualizada.cargo !== currentUser.cargo) {
+                    currentUser.cargo = sessaoAtualizada.cargo;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    updateUserHeader();
+                    showAdminButtons();
+                }
 
                 document.getElementById('tabelaUsuarios').innerHTML = usuarios.map(u => `
                     <tr class="hover:bg-gray-50">
@@ -163,6 +171,8 @@
                 alert("Erro ao carregar usuários");
             }
         }
+
+        // O restante das funções (formUsuario, excluir, editar, abrirModal, logout, onload) permanecem exatamente iguais.
 
         document.getElementById('formUsuario').addEventListener('submit', async (e) => {
             e.preventDefault();
