@@ -6,6 +6,7 @@ import { ILike } from "typeorm";
 const router = Router();
 const repo = AppDataSource.getRepository(Equipamento);
 
+// Listar todos os equipamentos com filtros
 router.get("/", async (req, res) => {
     try {
         const { tipo, nome, status, search } = req.query;
@@ -16,7 +17,6 @@ router.get("/", async (req, res) => {
         if (nome) where.usuarioResponsavel = ILike(`%${nome}%`);
         if (status) where.status = ILike(`%${status}%`);
         
-        // Busca geral (opcional)
         if (search) {
             where.tipo = ILike(`%${search}%`);
         }
@@ -33,7 +33,25 @@ router.get("/", async (req, res) => {
     }
 });
 
-// CRUD
+// NOVA ROTA: Busca um equipamento específico por ID
+// Essencial para que o formulário de edição abra preenchido
+router.get("/:id", async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const equipamento = await repo.findOneBy({ id });
+        
+        if (!equipamento) {
+            return res.status(404).json({ message: "Equipamento não encontrado" });
+        }
+        
+        res.json(equipamento);
+    } catch (error) {
+        console.error("Erro ao buscar equipamento por ID:", error);
+        res.status(500).json({ message: "Erro interno no servidor" });
+    }
+});
+
+// Criar novo equipamento
 router.post("/", async (req, res) => {
     try {
         res.status(201).json(await repo.save(repo.create(req.body)));
@@ -46,14 +64,29 @@ router.post("/", async (req, res) => {
     }
 });
 
+// Atualizar equipamento existente
 router.put("/:id", async (req, res) => {
-    const item = await repo.findOneBy({ id: parseInt(req.params.id) });
-    if (item) res.json(await repo.save(repo.merge(item, req.body)));
+    try {
+        const item = await repo.findOneBy({ id: parseInt(req.params.id) });
+        if (item) {
+            const atualizado = await repo.save(repo.merge(item, req.body));
+            res.json(atualizado);
+        } else {
+            res.status(404).json({ message: "Equipamento não encontrado" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Erro ao atualizar equipamento" });
+    }
 });
 
+// Deletar equipamento
 router.delete("/:id", async (req, res) => {
-    await repo.delete(parseInt(req.params.id));
-    res.json({ success: true });
+    try {
+        await repo.delete(parseInt(req.params.id));
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Erro ao deletar equipamento" });
+    }
 });
 
 export default router;
