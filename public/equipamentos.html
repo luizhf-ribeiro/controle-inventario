@@ -38,7 +38,7 @@
         </header>
 
         <div class="p-8 overflow-auto">
-            <!-- FILTROS COMPLETOS -->
+            <!-- FILTROS -->
             <div class="bg-white p-4 rounded-2xl shadow mb-6 grid grid-cols-2 md:grid-cols-7 gap-3">
                 <input type="text" id="filtroPatrimonio" placeholder="Patrimônio" class="px-4 py-3 border rounded-xl">
                 <input type="text" id="filtroTipo" placeholder="Tipo" class="px-4 py-3 border rounded-xl">
@@ -52,8 +52,7 @@
                     <option value="Manutenção">Em Manutenção</option>
                     <option value="Offline">Offline</option>
                 </select>
-                <button onclick="carregarTabela()" 
-                        class="bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 flex items-center justify-center gap-2">
+                <button onclick="carregarTabela()" class="bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 flex items-center justify-center gap-2">
                     <i class="fas fa-filter"></i> Filtrar
                 </button>
             </div>
@@ -76,7 +75,7 @@
         </div>
     </div>
 
-    <!-- Modal com as novas opções -->
+    <!-- Modal -->
     <div id="modalCadastro" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
         <div class="bg-white rounded-3xl p-8 w-full max-w-lg">
             <h2 class="text-2xl font-semibold mb-6" id="modalTitle">Novo Equipamento</h2>
@@ -117,120 +116,114 @@
         </div>
     </div>
 
-    <input type="file" id="importCSV" accept=".csv" class="hidden" onchange="importarCSV(event)">
-
     <script>
-    let editId = null;
-    let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Usuário","cargo":"Analista"}');
+        let editId = null;
 
-    async function carregarTabela() {
-        try {
-            const res = await fetch('/api/equipamentos');
-            const equipamentos = await res.json();
+        async function carregarTabela() {
+            try {
+                const res = await fetch('/api/equipamentos');
+                const equipamentos = await res.json();
 
-            document.getElementById('tabelaEquipamentos').innerHTML = equipamentos.map(e => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4">${e.patrimonio || '---'}</td>
-                    <td class="px-6 py-4 font-medium">${e.tipo || '---'}</td>
-                    <td class="px-6 py-4">${e.marcaModelo || e.modelo || '---'}</td>
-                    <td class="px-6 py-4 text-gray-500">${e.usuarioResponsavel || e.usuario || '---'}</td>
-                    <td class="px-6 py-4">
-                        <span class="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600">${e.status || 'Offline'}</span>
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <button onclick="editar(${e.id})" class="text-blue-600 hover:text-blue-800 mr-3">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="excluir(${e.id})" class="text-red-600 hover:text-red-800">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        } catch (error) {
-            console.error("Erro ao carregar equipamentos:", error);
-        }
-    }
-
-    async function editar(id) {
-        try {
-            const res = await fetch(`/api/equipamentos/${id}`);
-            if (!res.ok) throw new Error("Erro na requisição");
-            const e = await res.json();
-
-            // Preenche os campos usando os nomes que vêm do banco (e.usuarioResponsavel)
-            document.getElementById('patrimonio').value = e.patrimonio || '';
-            document.getElementById('tipo').value = e.tipo || '';
-            document.getElementById('marcaModelo').value = e.marcaModelo || e.modelo || '';
-            document.getElementById('usuario').value = e.usuarioResponsavel || e.usuario || '';
-
-            editId = id;
-            document.getElementById('modalTitle').innerText = "Editar Equipamento";
-            document.getElementById('btnSalvar').innerText = "Salvar Alterações";
-            
-            abrirModal();
-        } catch (error) {
-            alert("Erro ao buscar dados do equipamento. Verifique se o deploy no Render terminou.");
-        }
-    }
-
-    document.getElementById('formEquipamento').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const dados = {
-            patrimonio: document.getElementById('patrimonio').value,
-            tipo: document.getElementById('tipo').value,
-            marcaModelo: document.getElementById('marcaModelo').value,
-            // Enviamos como usuarioResponsavel para bater com o que seu Back-end espera
-            usuarioResponsavel: document.getElementById('usuario').value,
-            status: "Offline"
-        };
-
-        try {
-            let res;
-            if (editId) {
-                res = await fetch(`/api/equipamentos/${editId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-            } else {
-                res = await fetch('/api/equipamentos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
+                document.getElementById('tabelaEquipamentos').innerHTML = equipamentos.map(e => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">${e.patrimonio || '---'}</td>
+                        <td class="px-6 py-4 font-medium">${e.tipo || '---'}</td>
+                        <td class="px-6 py-4">${(e.marca || '') + ' ' + (e.modelo || '')}</td>
+                        <td class="px-6 py-4 text-gray-500">${e.usuarioResponsavel || e.usuario || '---'}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600">${e.status || 'Offline'}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="editar(${e.id})" class="text-blue-600 hover:text-blue-800 mr-3">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="excluir(${e.id})" class="text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error("Erro ao carregar equipamentos:", error);
             }
+        }
 
-            if (res.ok) {
-                fecharModal();
+        async function editar(id) {
+            try {
+                const res = await fetch(`/api/equipamentos/${id}`);
+                if (!res.ok) throw new Error("Erro na requisição");
+                const e = await res.json();
+
+                // Preenche os campos (agora com os IDs corretos do seu HTML)
+                document.getElementById('patrimonio').value = e.patrimonio || '';
+                document.getElementById('tipo').value = e.tipo || '';
+                document.getElementById('marca').value = e.marca || '';
+                document.getElementById('modelo').value = e.modelo || '';
+                document.getElementById('serial').value = e.serial || '';
+                document.getElementById('status').value = e.status || 'Offline';
+                document.getElementById('usuario').value = e.usuarioResponsavel || e.usuario || '';
+
+                editId = id;
+                document.getElementById('modalTitle').innerText = "Editar Equipamento";
+                document.getElementById('btnSalvar').innerText = "Salvar Alterações";
+                
+                document.getElementById('modalCadastro').classList.remove('hidden');
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao buscar dados do equipamento.\n\nVerifique se o deploy terminou e pressione CTRL + F5.");
+            }
+        }
+
+        document.getElementById('formEquipamento').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const dados = {
+                patrimonio: document.getElementById('patrimonio').value,
+                tipo: document.getElementById('tipo').value,
+                marca: document.getElementById('marca').value,
+                modelo: document.getElementById('modelo').value,
+                serial: document.getElementById('serial').value,
+                status: document.getElementById('status').value,
+                usuarioResponsavel: document.getElementById('usuario').value
+            };
+
+            try {
+                const url = editId ? `/api/equipamentos/${editId}` : '/api/equipamentos';
+                const method = editId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                if (res.ok) {
+                    fecharModal();
+                    carregarTabela();
+                } else {
+                    alert("Erro ao salvar.");
+                }
+            } catch (error) {
+                alert("Erro de conexão.");
+            }
+        });
+
+        function fecharModal() {
+            document.getElementById('modalCadastro').classList.add('hidden');
+            document.getElementById('formEquipamento').reset();
+            editId = null;
+            document.getElementById('modalTitle').innerText = "Novo Equipamento";
+            document.getElementById('btnSalvar').innerText = "Salvar";
+        }
+
+        async function excluir(id) {
+            if (confirm("Deseja excluir este equipamento?")) {
+                await fetch(`/api/equipamentos/${id}`, { method: 'DELETE' });
                 carregarTabela();
             }
-        } catch (error) {
-            alert("Erro ao salvar equipamento");
         }
-    });
 
-    function abrirModal() {
-        document.getElementById('modalCadastro').classList.remove('hidden');
-    }
-
-    function fecharModal() {
-        document.getElementById('modalCadastro').classList.add('hidden');
-        document.getElementById('formEquipamento').reset();
-        editId = null;
-        document.getElementById('modalTitle').innerText = "Novo Equipamento";
-        document.getElementById('btnSalvar').innerText = "Cadastrar";
-    }
-
-    async function excluir(id) {
-        if (confirm("Deseja excluir este equipamento?")) {
-            await fetch(`/api/equipamentos/${id}`, { method: 'DELETE' });
-            carregarTabela();
-        }
-    }
-
-    window.onload = carregarTabela;
-</script>
+        window.onload = carregarTabela;
+    </script>
 </body>
 </html>
