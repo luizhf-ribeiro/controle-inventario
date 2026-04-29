@@ -64,6 +64,7 @@
                             <th class="px-6 py-4 text-left">Patrimônio</th>
                             <th class="px-6 py-4 text-left">Tipo</th>
                             <th class="px-6 py-4 text-left">Marca / Modelo</th>
+                            <th class="px-6 py-4 text-left">Serial</th>
                             <th class="px-6 py-4 text-left">Usuário</th>
                             <th class="px-6 py-4 text-left">Status</th>
                             <th class="px-6 py-4 text-center">Ações</th>
@@ -158,7 +159,8 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4">${e.patrimonio || '---'}</td>
                         <td class="px-6 py-4 font-medium">${e.tipo || '---'}</td>
-                        <td class="px-6 py-4">${(e.marca || '') + ' ' + (e.modelo || '')}</td>
+                        <td class="px-6 py-4">${(e.marca || '')} ${(e.modelo || '')}</td>
+                        <td class="px-6 py-4 text-gray-600">${e.serial || '---'}</td>
                         <td class="px-6 py-4 text-gray-500">${e.usuarioResponsavel || e.usuario || '---'}</td>
                         <td class="px-6 py-4">
                             <span class="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600">${e.status || 'Offline'}</span>
@@ -181,7 +183,7 @@
         async function editar(id) {
             try {
                 const res = await fetch(`/api/equipamentos/${id}`);
-                if (!res.ok) throw new Error("Erro na requisição");
+                if (!res.ok) throw new Error();
                 const e = await res.json();
 
                 document.getElementById('patrimonio').value = e.patrimonio || '';
@@ -195,7 +197,6 @@
                 editId = id;
                 document.getElementById('modalTitle').innerText = "Editar Equipamento";
                 document.getElementById('btnSalvar').innerText = "Salvar Alterações";
-                
                 document.getElementById('modalCadastro').classList.remove('hidden');
             } catch (error) {
                 alert("Erro ao buscar dados do equipamento.");
@@ -262,7 +263,6 @@
         }
 
         function importarCSV(event) {
-            // Implementação básica - pode melhorar depois
             alert("Funcionalidade de importação em desenvolvimento.");
         }
 
