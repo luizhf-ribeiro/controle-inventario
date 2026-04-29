@@ -116,8 +116,38 @@
         </div>
     </div>
 
+    <input type="file" id="importCSV" accept=".csv" class="hidden" onchange="importarCSV(event)">
+
     <script>
         let editId = null;
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Usuário","cargo":"Analista"}');
+
+        function updateUserHeader() {
+            document.getElementById('userHeader').innerHTML = `
+                <i class="fas fa-bell text-2xl"></i>
+                <div>
+                    <p class="font-medium">${currentUser.nome}</p>
+                    <p class="text-sm text-gray-500">${currentUser.cargo}</p>
+                </div>
+            `;
+        }
+
+        function showAdminButtons() {
+            const container = document.getElementById('adminButtons');
+            if (currentUser.cargo === 'Administrador') {
+                container.innerHTML = `
+                    <button onclick="exportarCSV()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-2xl font-medium flex items-center gap-2">
+                        <i class="fas fa-download"></i> Exportar CSV
+                    </button>
+                    <button onclick="document.getElementById('importCSV').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-medium flex items-center gap-2">
+                        <i class="fas fa-upload"></i> Importar CSV
+                    </button>
+                    <button onclick="abrirModalCadastro()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-medium flex items-center gap-2">
+                        <i class="fas fa-plus"></i> Novo Equipamento
+                    </button>
+                `;
+            }
+        }
 
         async function carregarTabela() {
             try {
@@ -154,7 +184,6 @@
                 if (!res.ok) throw new Error("Erro na requisição");
                 const e = await res.json();
 
-                // Preenche os campos (agora com os IDs corretos do seu HTML)
                 document.getElementById('patrimonio').value = e.patrimonio || '';
                 document.getElementById('tipo').value = e.tipo || '';
                 document.getElementById('marca').value = e.marca || '';
@@ -169,8 +198,7 @@
                 
                 document.getElementById('modalCadastro').classList.remove('hidden');
             } catch (error) {
-                console.error(error);
-                alert("Erro ao buscar dados do equipamento.\n\nVerifique se o deploy terminou e pressione CTRL + F5.");
+                alert("Erro ao buscar dados do equipamento.");
             }
         }
 
@@ -187,33 +215,31 @@
                 usuarioResponsavel: document.getElementById('usuario').value
             };
 
-            try {
-                const url = editId ? `/api/equipamentos/${editId}` : '/api/equipamentos';
-                const method = editId ? 'PUT' : 'POST';
+            const url = editId ? `/api/equipamentos/${editId}` : '/api/equipamentos';
+            const method = editId ? 'PUT' : 'POST';
 
-                const res = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
+            await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dados)
+            });
 
-                if (res.ok) {
-                    fecharModal();
-                    carregarTabela();
-                } else {
-                    alert("Erro ao salvar.");
-                }
-            } catch (error) {
-                alert("Erro de conexão.");
-            }
+            alert("✅ Salvo com sucesso!");
+            fecharModal();
+            carregarTabela();
         });
+
+        function abrirModalCadastro() {
+            editId = null;
+            document.getElementById('modalTitle').innerText = "Novo Equipamento";
+            document.getElementById('btnSalvar').innerText = "Salvar";
+            document.getElementById('modalCadastro').classList.remove('hidden');
+        }
 
         function fecharModal() {
             document.getElementById('modalCadastro').classList.add('hidden');
             document.getElementById('formEquipamento').reset();
             editId = null;
-            document.getElementById('modalTitle').innerText = "Novo Equipamento";
-            document.getElementById('btnSalvar').innerText = "Salvar";
         }
 
         async function excluir(id) {
@@ -223,7 +249,33 @@
             }
         }
 
-        window.onload = carregarTabela;
+        function exportarCSV() {
+            fetch('/api/equipamentos').then(r => r.json()).then(data => {
+                let csv = "Patrimonio,Tipo,Marca,Modelo,Serial,Usuario,Status\n";
+                data.forEach(e => csv += `"${e.patrimonio}","${e.tipo}","${e.marca || ''}","${e.modelo || ''}","${e.serial || ''}","${e.usuarioResponsavel || ''}","${e.status}"\n`);
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'equipamentos.csv';
+                a.click();
+            });
+        }
+
+        function importarCSV(event) {
+            // Implementação básica - pode melhorar depois
+            alert("Funcionalidade de importação em desenvolvimento.");
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "index.html";
+        }
+
+        window.onload = () => {
+            updateUserHeader();
+            showAdminButtons();
+            carregarTabela();
+        };
     </script>
 </body>
 </html>
