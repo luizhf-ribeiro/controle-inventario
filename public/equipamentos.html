@@ -157,13 +157,15 @@
 
                 document.getElementById('tabelaEquipamentos').innerHTML = equipamentos.map(e => `
                     <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4">${e.patrimonio || '---'}</td>
-                        <td class="px-6 py-4 font-medium">${e.tipo || '---'}</td>
-                        <td class="px-6 py-4">${(e.marca || '')} ${(e.modelo || '')}</td>
-                        <td class="px-6 py-4 text-gray-600">${e.serial || '---'}</td>
+                        <td class="px-6 py-4 font-medium">${e.patrimonio || '---'}</td>
+                        <td class="px-6 py-4">${e.tipo || '---'}</td>
+                        <td class="px-6 py-4">${(e.marca || '')} ${e.modelo || ''}</td>
+                        <td class="px-6 py-4 text-gray-700 font-medium">${e.serialNumber || e.serial || '---'}</td>
                         <td class="px-6 py-4 text-gray-500">${e.usuarioResponsavel || e.usuario || '---'}</td>
                         <td class="px-6 py-4">
-                            <span class="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600">${e.status || 'Offline'}</span>
+                            <span class="px-3 py-1 rounded-full text-xs ${e.status === 'Disponível' ? 'bg-green-100 text-green-700' : e.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : e.status === 'Manutenção' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}">
+                                ${e.status || 'Offline'}
+                            </span>
                         </td>
                         <td class="px-6 py-4 text-center">
                             <button onclick="editar(${e.id})" class="text-blue-600 hover:text-blue-800 mr-3">
@@ -190,7 +192,7 @@
                 document.getElementById('tipo').value = e.tipo || '';
                 document.getElementById('marca').value = e.marca || '';
                 document.getElementById('modelo').value = e.modelo || '';
-                document.getElementById('serial').value = e.serial || '';
+                document.getElementById('serial').value = e.serialNumber || e.serial || '';
                 document.getElementById('status').value = e.status || 'Offline';
                 document.getElementById('usuario').value = e.usuarioResponsavel || e.usuario || '';
 
@@ -211,7 +213,7 @@
                 tipo: document.getElementById('tipo').value,
                 marca: document.getElementById('marca').value,
                 modelo: document.getElementById('modelo').value,
-                serial: document.getElementById('serial').value,
+                serialNumber: document.getElementById('serial').value,   // ← Alterado para serialNumber
                 status: document.getElementById('status').value,
                 usuarioResponsavel: document.getElementById('usuario').value
             };
@@ -253,7 +255,7 @@
         function exportarCSV() {
             fetch('/api/equipamentos').then(r => r.json()).then(data => {
                 let csv = "Patrimonio,Tipo,Marca,Modelo,Serial,Usuario,Status\n";
-                data.forEach(e => csv += `"${e.patrimonio}","${e.tipo}","${e.marca || ''}","${e.modelo || ''}","${e.serial || ''}","${e.usuarioResponsavel || ''}","${e.status}"\n`);
+                data.forEach(e => csv += `"${e.patrimonio}","${e.tipo}","${e.marca || ''}","${e.modelo || ''}","${e.serialNumber || e.serial || ''}","${e.usuarioResponsavel || ''}","${e.status}"\n`);
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
