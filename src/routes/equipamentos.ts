@@ -6,11 +6,9 @@ import { ILike } from "typeorm";
 const router = Router();
 const repo = AppDataSource.getRepository(Equipamento);
 
-// Listar todos os equipamentos com filtros
 router.get("/", async (req, res) => {
     try {
         const { tipo, nome, status, search } = req.query;
-
         const where: any = {};
 
         if (tipo) where.tipo = ILike(`%${tipo}%`);
@@ -33,8 +31,6 @@ router.get("/", async (req, res) => {
     }
 });
 
-// NOVA ROTA: Busca um equipamento específico por ID
-// Essencial para que o formulário de edição abra preenchido
 router.get("/:id", async (req, res) => {
     try {
         const id = parseInt(req.params.id);
@@ -51,7 +47,6 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-// Criar novo equipamento
 router.post("/", async (req, res) => {
     try {
         res.status(201).json(await repo.save(repo.create(req.body)));
@@ -64,7 +59,6 @@ router.post("/", async (req, res) => {
     }
 });
 
-// Atualizar equipamento existente
 router.put("/:id", async (req, res) => {
     try {
         const item = await repo.findOneBy({ id: parseInt(req.params.id) });
@@ -79,7 +73,6 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-// Deletar equipamento
 router.delete("/:id", async (req, res) => {
     try {
         await repo.delete(parseInt(req.params.id));

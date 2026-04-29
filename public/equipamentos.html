@@ -120,7 +120,6 @@
     <input type="file" id="importCSV" accept=".csv" class="hidden" onchange="importarCSV(event)">
 
     <script>
-    // Variável global para controlar se estamos editando ou criando
     let editId = null;
     let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Usuário","cargo":"Analista"}');
 
@@ -131,12 +130,12 @@
 
             document.getElementById('tabelaEquipamentos').innerHTML = equipamentos.map(e => `
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4">${e.patrimonio}</td>
-                    <td class="px-6 py-4 font-medium">${e.tipo}</td>
-                    <td class="px-6 py-4">${e.marcaModelo}</td>
-                    <td class="px-6 py-4 text-gray-500">${e.usuario}</td>
+                    <td class="px-6 py-4">${e.patrimonio || '---'}</td>
+                    <td class="px-6 py-4 font-medium">${e.tipo || '---'}</td>
+                    <td class="px-6 py-4">${e.marcaModelo || e.modelo || '---'}</td>
+                    <td class="px-6 py-4 text-gray-500">${e.usuarioResponsavel || e.usuario || '---'}</td>
                     <td class="px-6 py-4">
-                        <span class="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600">Offline</span>
+                        <span class="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600">${e.status || 'Offline'}</span>
                     </td>
                     <td class="px-6 py-4 text-center">
                         <button onclick="editar(${e.id})" class="text-blue-600 hover:text-blue-800 mr-3">
@@ -153,26 +152,25 @@
         }
     }
 
-    // FUNÇÃO AJUSTADA: Agora ela preenche o formulário
     async function editar(id) {
         try {
             const res = await fetch(`/api/equipamentos/${id}`);
+            if (!res.ok) throw new Error("Erro na requisição");
             const e = await res.json();
 
-            // Preenchendo os campos do modal com os dados do banco
-            document.getElementById('patrimonio').value = e.patrimonio;
-            document.getElementById('tipo').value = e.tipo;
-            document.getElementById('marcaModelo').value = e.marcaModelo;
-            document.getElementById('usuario').value = e.usuario;
+            // Preenche os campos usando os nomes que vêm do banco (e.usuarioResponsavel)
+            document.getElementById('patrimonio').value = e.patrimonio || '';
+            document.getElementById('tipo').value = e.tipo || '';
+            document.getElementById('marcaModelo').value = e.marcaModelo || e.modelo || '';
+            document.getElementById('usuario').value = e.usuarioResponsavel || e.usuario || '';
 
-            // Define o ID de edição e muda a interface do modal
             editId = id;
             document.getElementById('modalTitle').innerText = "Editar Equipamento";
             document.getElementById('btnSalvar').innerText = "Salvar Alterações";
             
             abrirModal();
         } catch (error) {
-            alert("Erro ao buscar dados do equipamento");
+            alert("Erro ao buscar dados do equipamento. Verifique se o deploy no Render terminou.");
         }
     }
 
@@ -183,20 +181,20 @@
             patrimonio: document.getElementById('patrimonio').value,
             tipo: document.getElementById('tipo').value,
             marcaModelo: document.getElementById('marcaModelo').value,
-            usuario: document.getElementById('usuario').value
+            // Enviamos como usuarioResponsavel para bater com o que seu Back-end espera
+            usuarioResponsavel: document.getElementById('usuario').value,
+            status: "Offline"
         };
 
         try {
             let res;
             if (editId) {
-                // Se existe editId, faz um PUT para atualizar
                 res = await fetch(`/api/equipamentos/${editId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(dados)
                 });
             } else {
-                // Se não existe, faz um POST para criar novo
                 res = await fetch('/api/equipamentos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -207,7 +205,6 @@
             if (res.ok) {
                 fecharModal();
                 carregarTabela();
-                editId = null; // Reseta o ID
             }
         } catch (error) {
             alert("Erro ao salvar equipamento");
