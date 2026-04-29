@@ -31,6 +31,10 @@
     <div class="flex-1 flex flex-col overflow-hidden">
         <header class="bg-white p-6 flex justify-between items-center shadow-sm">
             <h1 class="text-3xl font-semibold">Periféricos</h1>
+            <div class="flex items-center gap-4">
+                <div id="adminButtons" class="flex gap-3"></div>
+                <div id="userHeader" class="flex items-center gap-3 pl-6 border-l border-gray-200"></div>
+            </div>
         </header>
 
         <div class="p-8 overflow-auto">
@@ -46,10 +50,7 @@
                     <option value="Em uso">Em uso</option>
                     <option value="Manutenção">Em Manutenção</option>
                 </select>
-                <button onclick="carregarTabela()" 
-                        class="bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 flex items-center justify-center gap-2">
-                    <i class="fas fa-filter"></i> Filtrar
-                </button>
+                <button onclick="carregarTabela()" class="bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700">Filtrar</button>
             </div>
 
             <div class="bg-white rounded-3xl shadow overflow-hidden">
@@ -77,7 +78,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="col-span-2">
                         <label class="block text-sm mb-1">Tipo</label>
-                        <input type="text" id="tipo" class="w-full p-3 border rounded-xl" placeholder="Ex: Mouse, Teclado, Monitor" required>
+                        <input type="text" id="tipo" class="w-full p-3 border rounded-xl" placeholder="Ex: Mouse, Teclado..." required>
                     </div>
                     <div><label class="block text-sm mb-1">Marca</label><input type="text" id="marca" class="w-full p-3 border rounded-xl" required></div>
                     <div><label class="block text-sm mb-1">Modelo</label><input type="text" id="modelo" class="w-full p-3 border rounded-xl" required></div>
@@ -103,8 +104,38 @@
         </div>
     </div>
 
+    <input type="file" id="importCSV" accept=".csv" class="hidden" onchange="importarCSV(event)">
+
     <script>
         let editandoId = null;
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Usuário","cargo":"Analista"}');
+
+        function updateUserHeader() {
+            document.getElementById('userHeader').innerHTML = `
+                <i class="fas fa-bell text-2xl"></i>
+                <div>
+                    <p class="font-medium">${currentUser.nome}</p>
+                    <p class="text-sm text-gray-500">${currentUser.cargo}</p>
+                </div>
+            `;
+        }
+
+        function showAdminButtons() {
+            const container = document.getElementById('adminButtons');
+            if (currentUser.cargo === 'Administrador') {
+                container.innerHTML = `
+                    <button onclick="exportarCSV()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-2xl font-medium flex items-center gap-2">
+                        <i class="fas fa-download"></i> Exportar CSV
+                    </button>
+                    <button onclick="document.getElementById('importCSV').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-medium flex items-center gap-2">
+                        <i class="fas fa-upload"></i> Importar CSV
+                    </button>
+                    <button onclick="abrirModalCadastro()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-medium flex items-center gap-2">
+                        <i class="fas fa-plus"></i> Novo Periférico
+                    </button>
+                `;
+            }
+        }
 
         async function carregarTabela() {
             try {
@@ -117,10 +148,7 @@
                         <td class="px-6 py-4">${(i.marca || '')} ${(i.modelo || '')}</td>
                         <td class="px-6 py-4">${i.usuarioResponsavel || i.usuario || '---'}</td>
                         <td class="px-6 py-4">
-                            <span class="px-3 py-1 rounded-full text-xs 
-                                ${i.status === 'Disponível' ? 'bg-green-100 text-green-700' : 
-                                  i.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : 
-                                  'bg-red-100 text-red-700'}">
+                            <span class="px-3 py-1 rounded-full text-xs ${i.status === 'Disponível' ? 'bg-green-100 text-green-700' : i.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">
                                 ${i.status || '---'}
                             </span>
                         </td>
@@ -132,7 +160,6 @@
                 `).join('') || '<tr><td colspan="5" class="text-center py-12 text-gray-500">Nenhum periférico encontrado.</td></tr>';
             } catch (error) {
                 console.error(error);
-                document.getElementById('tabelaPerifericos').innerHTML = `<tr><td colspan="5" class="text-center py-12 text-red-500">Erro ao carregar dados</td></tr>`;
             }
         }
 
@@ -160,7 +187,6 @@
 
         document.getElementById('formPeriferico').addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const data = {
                 tipo: document.getElementById('tipo').value,
                 marca: document.getElementById('marca').value,
@@ -191,12 +217,54 @@
             }
         }
 
+        function abrirModalCadastro() {
+            editandoId = null;
+            document.getElementById('modalTitle').textContent = "Novo Periférico";
+            document.getElementById('btnSalvar').textContent = "Salvar";
+            document.getElementById('modalCadastro').classList.remove('hidden');
+        }
+
         function fecharModal() {
             document.getElementById('modalCadastro').classList.add('hidden');
             document.getElementById('formPeriferico').reset();
             editandoId = null;
-            document.getElementById('modalTitle').textContent = "Novo Periférico";
-            document.getElementById('btnSalvar').textContent = "Salvar";
+        }
+
+        function exportarCSV() {
+            fetch('/api/perifericos').then(r => r.json()).then(data => {
+                let csv = "Tipo,Marca,Modelo,Patrimonio,Usuario,Status\n";
+                data.forEach(i => csv += `"${i.tipo}","${i.marca}","${i.modelo}","${i.patrimonio || ''}","${i.usuarioResponsavel || ''}","${i.status}"\n`);
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'perifericos.csv';
+                a.click();
+            });
+        }
+
+        function importarCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const lines = e.target.result.split('\n');
+                let count = 0;
+                for (let line of lines.slice(1)) {
+                    if (!line.trim()) continue;
+                    const [tipo, marca, modelo, patrimonio, usuario, status] = line.split(',').map(s => s.replace(/"/g,'').trim());
+                    if (tipo) {
+                        await fetch('/api/perifericos', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({tipo, marca, modelo, patrimonio, usuarioResponsavel: usuario, status: status || 'Disponível'})
+                        });
+                        count++;
+                    }
+                }
+                alert(`✅ ${count} periféricos importados!`);
+                carregarTabela();
+            };
+            reader.readAsText(file);
         }
 
         function logout() {
@@ -204,7 +272,11 @@
             window.location.href = "index.html";
         }
 
-        window.onload = carregarTabela;
+        window.onload = () => {
+            updateUserHeader();
+            showAdminButtons();
+            carregarTabela();
+        };
     </script>
 </body>
 </html>
