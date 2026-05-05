@@ -66,6 +66,7 @@
                             <th class="px-6 py-4 text-left">Marca / Modelo</th>
                             <th class="px-6 py-4 text-left">Serial</th>
                             <th class="px-6 py-4 text-left">Usuário</th>
+                            <th class="px-6 py-4 text-left">Localização</th> <!-- ADAPTAÇÃO: Título -->
                             <th class="px-6 py-4 text-left">Status</th>
                             <th class="px-6 py-4 text-center">Ações</th>
                         </tr>
@@ -95,6 +96,13 @@
                     <div><label class="block text-sm mb-1">Modelo</label><input type="text" id="modelo" class="w-full p-3 border rounded-xl" required></div>
                     <div><label class="block text-sm mb-1">Patrimônio</label><input type="text" id="patrimonio" class="w-full p-3 border rounded-xl" required></div>
                     <div><label class="block text-sm mb-1">Serial</label><input type="text" id="serial" class="w-full p-3 border rounded-xl"></div>
+                    
+                    <!-- ADAPTAÇÃO: Campo de Localização no Modal -->
+                    <div class="col-span-2">
+                        <label class="block text-sm mb-1 font-medium text-blue-700">Localização Física</label>
+                        <input type="text" id="localizacao" class="w-full p-3 border-2 border-blue-50 border rounded-xl focus:border-blue-500 outline-none" placeholder="Ex: Almoxarifado / Prédio 1">
+                    </div>
+
                     <div class="col-span-2">
                         <label class="block text-sm mb-1">Status</label>
                         <select id="status" class="w-full p-3 border rounded-xl">
@@ -162,6 +170,8 @@
                         <td class="px-6 py-4">${(e.marca || '')} ${e.modelo || ''}</td>
                         <td class="px-6 py-4 text-gray-700 font-medium">${e.serialNumber || e.serial || '---'}</td>
                         <td class="px-6 py-4 text-gray-500">${e.usuarioResponsavel || e.usuario || '---'}</td>
+                        <!-- ADAPTAÇÃO: Exibição da Localização -->
+                        <td class="px-6 py-4 font-semibold text-blue-600">${e.localizacao || '---'}</td>
                         <td class="px-6 py-4">
                             <span class="px-3 py-1 rounded-full text-xs ${e.status === 'Disponível' ? 'bg-green-100 text-green-700' : e.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : e.status === 'Manutenção' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}">
                                 ${e.status || 'Offline'}
@@ -193,6 +203,10 @@
                 document.getElementById('marca').value = e.marca || '';
                 document.getElementById('modelo').value = e.modelo || '';
                 document.getElementById('serial').value = e.serialNumber || e.serial || '';
+                
+                // ADAPTAÇÃO: Carregar dado para edição
+                document.getElementById('localizacao').value = e.localizacao || '';
+
                 document.getElementById('status').value = e.status || 'Offline';
                 document.getElementById('usuario').value = e.usuarioResponsavel || e.usuario || '';
 
@@ -213,7 +227,11 @@
                 tipo: document.getElementById('tipo').value,
                 marca: document.getElementById('marca').value,
                 modelo: document.getElementById('modelo').value,
-                serialNumber: document.getElementById('serial').value,   // ← Alterado para serialNumber
+                serialNumber: document.getElementById('serial').value,
+                
+                // ADAPTAÇÃO: Incluir dado no envio
+                localizacao: document.getElementById('localizacao').value,
+
                 status: document.getElementById('status').value,
                 usuarioResponsavel: document.getElementById('usuario').value
             };
@@ -254,18 +272,15 @@
 
         function exportarCSV() {
             fetch('/api/equipamentos').then(r => r.json()).then(data => {
-                let csv = "Patrimonio,Tipo,Marca,Modelo,Serial,Usuario,Status\n";
-                data.forEach(e => csv += `"${e.patrimonio}","${e.tipo}","${e.marca || ''}","${e.modelo || ''}","${e.serialNumber || e.serial || ''}","${e.usuarioResponsavel || ''}","${e.status}"\n`);
+                // ADAPTAÇÃO: Adicionar coluna ao CSV
+                let csv = "Patrimonio,Tipo,Marca,Modelo,Serial,Localizacao,Usuario,Status\n";
+                data.forEach(e => csv += `"${e.patrimonio}","${e.tipo}","${e.marca || ''}","${e.modelo || ''}","${e.serialNumber || e.serial || ''}","${e.localizacao || ''}","${e.usuarioResponsavel || ''}","${e.status}"\n`);
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = 'equipamentos.csv';
                 a.click();
             });
-        }
-
-        function importarCSV(event) {
-            alert("Funcionalidade de importação em desenvolvimento.");
         }
 
         function logout() {

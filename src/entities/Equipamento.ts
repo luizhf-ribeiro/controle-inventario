@@ -26,6 +26,10 @@ export class Equipamento {
     @Column({ nullable: true })
     usuarioResponsavel: string = "";
 
+    // ADAPTAÇÃO: Nova coluna para controle físico
+    @Column({ nullable: true })
+    localizacao: string = "";
+
     @CreateDateColumn()
     dataCadastro: Date = new Date();
 }
