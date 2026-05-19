@@ -6,7 +6,7 @@ import { ILike } from "typeorm";
 const router = Router();
 const repo = AppDataSource.getRepository(Usuario);
 
-// 🚀 LISTAR USUÁRIOS COM FILTROS TRATADOS CONTRA STRINGS VAZIAS
+// 🚀 LISTAR USUÁRIOS COM LOGS DETALHADOS DE ERRO DO POSTGRES
 router.get("/", async (req: Request, res: Response) => {
     try {
         const { nome, email, cargo, search } = req.query;
@@ -24,21 +24,24 @@ router.get("/", async (req: Request, res: Response) => {
 
         res.json(usuarios);
     } catch (error: any) {
-        console.error("❌ Erro ao listar usuários no banco:", error);
-        res.status(500).json({ message: "Erro ao buscar usuários", error: error.message });
+        // 🔥 CRÍTICO: Isso vai imprimir o erro exato do banco (ex: coluna inexistente) nos logs do Render
+        console.error("❌ [DATABASE ERROR] Falha crítica na query do Supabase:");
+        console.error(`Mensagem: ${error.message}`);
+        console.error(`Detalhes: ${JSON.stringify(error)}`);
+        
+        res.status(500).json({ 
+            message: "Erro interno ao buscar usuários na base de dados.", 
+            error: error.message 
+        });
     }
 });
 
-// Criar novo usuário - Abordagem direta com instância da classe
+// Criar novo usuário
 router.post("/", async (req: Request, res: Response) => {
     try {
-        // Cria uma nova instância limpa do modelo Usuario
         const novoUsuario = new Usuario();
-        
-        // Mescla as propriedades vindas do corpo da requisição de forma segura
         repo.merge(novoUsuario, req.body);
         
-        // Garante a atribuição correta do booleano de primeiro acesso
         if (req.body.primeiroAcesso !== undefined) {
             novoUsuario.primeiroAcesso = req.body.primeiroAcesso === true || req.body.primeiroAcesso === 'true';
         }
@@ -46,8 +49,8 @@ router.post("/", async (req: Request, res: Response) => {
         const salvo = await repo.save(novoUsuario);
         res.status(201).json(salvo);
     } catch (error: any) {
-        console.error("❌ Erro ao cadastrar usuário:", error);
-        res.status(500).json({ message: "Erro ao cadastrar usuário" });
+        console.error("❌ [DATABASE ERROR] Erro ao salvar usuário:", error.message);
+        res.status(500).json({ message: "Erro ao cadastrar usuário", error: error.message });
     }
 });
 
@@ -63,9 +66,9 @@ router.put("/:id", async (req: Request, res: Response) => {
 
         const atualizado = await repo.save(repo.merge(item, req.body));
         res.json(atualizado);
-    } catch (error) {
-        console.error("❌ Erro ao atualizar usuário:", error);
-        res.status(500).json({ message: "Erro ao atualizar usuário" });
+    } catch (error: any) {
+        console.error("❌ [DATABASE ERROR] Erro ao atualizar usuário:", error.message);
+        res.status(500).json({ message: "Erro ao atualizar usuário", error: error.message });
     }
 });
 
@@ -75,9 +78,9 @@ router.delete("/:id", async (req: Request, res: Response) => {
         const id = parseInt(req.params.id);
         await repo.delete(id);
         res.json({ success: true });
-    } catch (error) {
-        console.error("❌ Erro ao deletar usuário:", error);
-        res.status(500).json({ message: "Erro ao deletar usuário" });
+    } catch (error: any) {
+        console.error("❌ [DATABASE ERROR] Erro ao deletar usuário:", error.message);
+        res.status(500).json({ message: "Erro ao deletar usuário", error: error.message });
     }
 });
 
