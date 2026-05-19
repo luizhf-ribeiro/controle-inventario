@@ -4,7 +4,7 @@ import cors from "cors";
 import path from "path";
 import { AppDataSource } from "./data-source";
 
-import authRoutes from "./routes/auth";
+import authRoutes from './routes/auth.js';  
 import equipamentosRoutes from "./routes/equipamentos";
 import perifericosRoutes from "./routes/perifericos";
 import componentesRoutes from "./routes/componentes";
