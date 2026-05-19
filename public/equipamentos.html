@@ -10,7 +10,8 @@
 </head>
 <body class="bg-gray-100 flex h-screen">
 
-    <!-- Sidebar -->
+    <input type="file" id="importCSV" accept=".csv" class="hidden" style="display: none;" onchange="importarCSV(this)">
+
     <div class="w-64 bg-[#1a2537] text-white flex flex-col">
         <div class="p-6 border-b border-[#2a3a50]">
             <div class="text-2xl font-bold">Hepta / Cetesb</div>
@@ -38,7 +39,6 @@
         </header>
 
         <div class="p-8 overflow-auto">
-            <!-- FILTROS -->
             <div class="bg-white p-4 rounded-2xl shadow mb-6 grid grid-cols-2 md:grid-cols-7 gap-3">
                 <input type="text" id="filtroPatrimonio" placeholder="Patrimônio" class="px-4 py-3 border rounded-xl">
                 <input type="text" id="filtroTipo" placeholder="Tipo" class="px-4 py-3 border rounded-xl">
@@ -66,7 +66,7 @@
                             <th class="px-6 py-4 text-left">Marca / Modelo</th>
                             <th class="px-6 py-4 text-left">Serial</th>
                             <th class="px-6 py-4 text-left">Usuário</th>
-                            <th class="px-6 py-4 text-left font-semibold">Localização</th> <!-- Padronizado -->
+                            <th class="px-6 py-4 text-left font-semibold">Localização</th>
                             <th class="px-6 py-4 text-left">Status</th>
                             <th class="px-6 py-4 text-center">Ações</th>
                         </tr>
@@ -77,7 +77,6 @@
         </div>
     </div>
 
-    <!-- Modal -->
     <div id="modalCadastro" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
         <div class="bg-white rounded-3xl p-8 w-full max-w-lg">
             <h2 class="text-2xl font-semibold mb-6" id="modalTitle">Novo Equipamento</h2>
@@ -126,7 +125,7 @@
 
     <script>
         let editId = null;
-        let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Usuário","cargo":"Analista"}');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Luiz Ribeiro","cargo":"Administrador"}');
 
         function updateUserHeader() {
             document.getElementById('userHeader').innerHTML = `
@@ -167,7 +166,7 @@
                         <td class="px-6 py-4">${(e.marca || '')} ${e.modelo || ''}</td>
                         <td class="px-6 py-4 text-gray-700">${e.serialNumber || e.serial || '---'}</td>
                         <td class="px-6 py-4 text-gray-400 uppercase font-normal">${e.usuarioResponsavel || e.usuario || '---'}</td>
-                        <td class="px-6 py-4 text-gray-500">${e.localizacao || '---'}</td> <!-- Padronizado -->
+                        <td class="px-6 py-4 text-gray-500">${e.localizacao || '---'}</td>
                         <td class="px-6 py-4">
                             <span class="px-3 py-1 rounded-full text-xs ${e.status === 'Disponível' ? 'bg-green-100 text-green-700' : e.status === 'Em uso' ? 'bg-yellow-100 text-yellow-700' : e.status === 'Manutenção' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}">
                                 ${e.status || 'Offline'}
@@ -185,6 +184,47 @@
                 `).join('');
             } catch (error) {
                 console.error("Erro ao carregar equipamentos:", error);
+            }
+        }
+
+        async function importarCSV(input) {
+            if (!input.files || input.files.length === 0) {
+                console.warn("⚠️ Nenhum arquivo foi selecionado.");
+                return;
+            }
+            
+            const file = input.files[0];
+            console.log(`📂 Arquivo selecionado: ${file.name}`);
+
+            if (!file.name.endsWith('.csv')) {
+                alert("❌ Selecione apenas arquivos .csv");
+                input.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                console.log("🚀 Despachando payload para /api/equipamentos/import...");
+                const response = await fetch('/api/equipamentos/import', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    alert(`✅ Sucesso: ${resultado.message}`);
+                    carregarTabela();
+                } else {
+                    alert(`❌ Erro do Servidor: ${resultado.message}`);
+                }
+            } catch (error) {
+                console.error("❌ Erro na requisição:", error);
+                alert("Erro de conexão ao processar importação.");
+            } finally {
+                input.value = '';
             }
         }
 
