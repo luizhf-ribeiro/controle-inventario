@@ -15,13 +15,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Servir arquivos estáticos (HTML, CSS, etc.)
+// Servir arquivos estáticos (HTML, CSS, etc.) da pasta public
 const publicPath = path.resolve(__dirname, "../public");
 app.use(express.static(publicPath));
 
-console.log("📁 Servindo arquivos de:", publicPath);
+console.log("📁 Servindo arquivos estáticos de:", publicPath);
 
-// Rotas da API
+// Rotas da API estruturadas
 app.use("/api/auth", authRoutes);
 app.use("/api/equipamentos", equipamentosRoutes);
 app.use("/api/perifericos", perifericosRoutes);
@@ -30,9 +30,9 @@ app.use("/api/usuarios", usuariosRoutes);
 
 app.get("/api/test", (req, res) => res.json({ message: "API OK" }));
 
-// Todas as rotas não-API servem o index.html (SPA-like)
+// Todas as rotas não-API redirecionam e exibem a tela de dashboard (SPA fallback confiável)
 app.get("*", (req, res) => {
-    res.sendFile(path.join(publicPath, "index.html"));
+    res.sendFile(path.join(publicPath, "dashboard.html"));
 });
 
 const PORT = process.env.PORT || 3000;

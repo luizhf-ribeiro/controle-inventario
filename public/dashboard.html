@@ -14,7 +14,6 @@
 </head>
 <body class="bg-gray-100 flex h-screen">
 
-    <!-- Sidebar -->
     <div class="w-64 bg-[#1a2537] text-white flex flex-col">
         <div class="p-6 border-b border-[#2a3a50]">
             <div class="text-2xl font-bold">Hepta / Cetesb</div>
@@ -44,13 +43,11 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6" id="cardsContainer"></div>
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-                <!-- Status Geral -->
                 <div class="bg-white rounded-3xl p-6 shadow">
                     <h3 class="font-semibold text-lg mb-4">Status Geral dos Ativos</h3>
                     <canvas id="statusChart"></canvas>
                 </div>
                 
-                <!-- Distribuição por Categoria -->
                 <div class="bg-white rounded-3xl p-6 shadow">
                     <h3 class="font-semibold text-lg mb-4">Distribuição por Categoria</h3>
                     <canvas id="categoriaChart"></canvas>
@@ -60,7 +57,9 @@
     </div>
 
     <script>
-        let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Usuário","cargo":"Analista"}');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Luiz Ribeiro","cargo":"Administrador"}');
+        let statusChartInstance = null;
+        let categoriaChartInstance = null;
 
         function updateUserHeader() {
             document.getElementById('userHeader').innerHTML = `
@@ -74,47 +73,51 @@
 
         async function carregarDashboard() {
             try {
-                const [eqRes, periRes, compRes] = await Promise.all([
-                    fetch('/api/equipamentos'),
-                    fetch('/api/perifericos'),
-                    fetch('/api/componentes')
-                ]);
+                // Função auxiliar para capturar dados tratando erros individuais por endpoint vazios
+                const fetchSeguro = async (url) => {
+                    try {
+                        const res = await fetch(url);
+                        if (!res.ok) return [];
+                        const data = await res.json();
+                        return Array.isArray(data) ? data : [];
+                    } catch (e) {
+                        console.warn(`⚠️ Falha ao buscar dados da rota: ${url}`);
+                        return [];
+                    }
+                };
 
-                const equipamentos = await eqRes.json();
-                const perifericos = await periRes.json();
-                const componentes = await compRes.json();
+                // Execução em paralelo
+                const [equipamentos, perifericos, componentes] = await Promise.all([
+                    fetchSeguro('/api/equipamentos'),
+                    fetchSeguro('/api/perifericos'),
+                    fetchSeguro('/api/componentes')
+                ]);
 
                 const total = equipamentos.length + perifericos.length + componentes.length;
 
-                // Cards
+                // Renderização segura dos Cards Informativos
                 document.getElementById('cardsContainer').innerHTML = `
-                    <div class="bg-blue-600 text-white rounded-3xl p-6">
-                        <p class="text-sm opacity-75">Total Ativos</p>
-                        <p class="text-5xl font-bold mt-2">${total}</p>
+                    <div class="bg-blue-600 text-white rounded-3xl p-6 shadow-md">
+                        <p class="text-sm opacity-75 font-medium">Total Ativos</p>
+                        <p class="text-5xl font-bold mt-2" id="cardTotal">${total}</p>
                     </div>
-                    <div class="bg-white rounded-3xl p-6 shadow">
-                        <p class="text-sm text-gray-500">Equipamentos</p>
-                        <p class="text-4xl font-bold mt-2">${equipamentos.length}</p>
+                    <div class="bg-white rounded-3xl p-6 shadow border-l-4 border-blue-500">
+                        <p class="text-sm text-gray-500 font-medium">Equipamentos</p>
+                        <p class="text-4xl font-bold mt-2 text-gray-800">${equipamentos.length}</p>
                     </div>
-                    <div class="bg-white rounded-3xl p-6 shadow">
-                        <p class="text-sm text-gray-500">Periféricos</p>
-                        <p class="text-4xl font-bold mt-2">${perifericos.length}</p>
+                    <div class="bg-white rounded-3xl p-6 shadow border-l-4 border-emerald-500">
+                        <p class="text-sm text-gray-500 font-medium">Periféricos</p>
+                        <p class="text-4xl font-bold mt-2 text-gray-800">${perifericos.length}</p>
                     </div>
-                    <div class="bg-white rounded-3xl p-6 shadow">
-                        <p class="text-sm text-gray-500">Componentes</p>
-                        <p class="text-4xl font-bold mt-2">${componentes.length}</p>
+                    <div class="bg-white rounded-3xl p-6 shadow border-l-4 border-violet-500">
+                        <p class="text-sm text-gray-500 font-medium">Componentes</p>
+                        <p class="text-4xl font-bold mt-2 text-gray-800">${componentes.length}</p>
                     </div>
                 `;
 
-                // Contagem de Status (todos os itens juntos)
+                // Agrupamento estruturado de status de todos os itens cadastrados
                 const todosItens = [...equipamentos, ...perifericos, ...componentes];
-
-                const statusCount = {
-                    'Disponível': 0,
-                    'Em uso': 0,
-                    'Manutenção': 0,
-                    'Offline': 0
-                };
+                const statusCount = { 'Disponível': 0, 'Em uso': 0, 'Manutenção': 0, 'Offline': 0 };
 
                 todosItens.forEach(item => {
                     const status = item.status || 'Offline';
@@ -125,49 +128,61 @@
                     }
                 });
 
-                // Gráfico de Status (Pizza)
-                new Chart(document.getElementById('statusChart'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Disponível', 'Em uso', 'Manutenção', 'Offline'],
-                        datasets: [{
-                            data: [
-                                statusCount['Disponível'],
-                                statusCount['Em uso'],
-                                statusCount['Manutenção'],
-                                statusCount['Offline']
-                            ],
-                            backgroundColor: ['#10b981', '#3b82f6', '#ef4444', '#6b7280']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-
-                // Gráfico de Barras
-                new Chart(document.getElementById('categoriaChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['Equipamentos', 'Periféricos', 'Componentes'],
-                        datasets: [{
-                            label: 'Quantidade',
-                            data: [equipamentos.length, perifericos.length, componentes.length],
-                            backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: { y: { beginAtZero: true } }
-                    }
-                });
+                renderizarGraficos(statusCount, equipamentos.length, perifericos.length, componentes.length);
 
             } catch (error) {
-                console.error("Erro ao carregar dashboard:", error);
+                console.error("Erro crítico ao compilar dados para renderização do painel:", error);
             }
+        }
+
+        function renderizarGraficos(statusCount, qteEquip, qtePerif, qteComp) {
+            // Destruição prévia das instâncias para evitar duplicação ou sobreposição de hover
+            if (statusChartInstance) statusChartInstance.destroy();
+            if (categoriaChartInstance) categoriaChartInstance.destroy();
+
+            // 1. Instância do Gráfico de Rosca (Status)
+            const ctxStatus = document.getElementById('statusChart');
+            statusChartInstance = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Disponível', 'Em uso', 'Manutenção', 'Offline'],
+                    datasets: [{
+                        data: [
+                            statusCount['Disponível'],
+                            statusCount['Em uso'],
+                            statusCount['Manutenção'],
+                            statusCount['Offline']
+                        ],
+                        backgroundColor: ['#10b981', '#3b82f6', '#ef4444', '#6b7280'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // 2. Instância do Gráfico de Barras (Categorias)
+            const ctxCategoria = document.getElementById('categoriaChart');
+            categoriaChartInstance = new Chart(ctxCategoria, {
+                type: 'bar',
+                data: {
+                    labels: ['Equipamentos', 'Periféricos', 'Componentes'],
+                    datasets: [{
+                        label: 'Quantidade de Ativos',
+                        data: [qteEquip, qtePerif, qteComp],
+                        backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
         }
 
         function logout() {
