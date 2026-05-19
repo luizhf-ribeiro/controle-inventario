@@ -9,10 +9,8 @@ import fs from "fs";
 const router = Router();
 const repo = AppDataSource.getRepository(Equipamento);
 
-// Configuração do Multer para aceitar uploads temporários
 const upload = multer({ dest: "uploads/" });
 
-// Interface para mapeamento flexível das colunas do CSV
 interface CsvRow {
     Patrimonio?: string;
     patrimonio?: string;
@@ -34,11 +32,15 @@ interface CsvRow {
     status?: string;
 }
 
-// 🚀 ROTA DE IMPORTAÇÃO: Aceita as chaves 'file' ou 'equipamentos' de forma flexível
+const limparTexto = (texto: string | undefined): string => {
+    if (!texto) return "";
+    return texto.replace(/^["']|["']$/g, "").trim();
+};
+
+// 🚀 ROTA DE IMPORTAÇÃO CORRIGIDA E TIPADA
 router.post("/import", upload.fields([{ name: "file", maxCount: 1 }, { name: "equipamentos", maxCount: 1 }]), async (req: Request, res: Response) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     
-    // Captura o arquivo independentemente de qual chave o frontend utilizou
     const file = (files && files["file"] ? files["file"][0] : null) || 
                  (files && files["equipamentos"] ? files["equipamentos"][0] : null);
 
@@ -47,12 +49,11 @@ router.post("/import", upload.fields([{ name: "file", maxCount: 1 }, { name: "eq
         return res.status(400).json({ message: "Nenhum equipamento enviado para importação" });
     }
 
-    console.log(`📂 [IMPORT] Arquivo recebido em produção: ${file.originalname}`);
+    console.log(`📂 [IMPORT] Arquivo recebido para higienização: ${file.originalname}`);
 
-    const registros: CsvRow[] = [];
+    const registros: any[] = [];
     let separador = ",";
 
-    // Detecção automática de separador (Vírgula ou Ponto e Vírgula)
     try {
         const primeiraLinha = fs.readFileSync(file.path, "utf8").split("\n")[0];
         if (primeiraLinha.includes(";")) {
@@ -65,10 +66,12 @@ router.post("/import", upload.fields([{ name: "file", maxCount: 1 }, { name: "eq
         console.error("❌ [IMPORT] Falha ao analisar cabeçalho do arquivo:", err);
     }
 
-    // Processamento do fluxo do arquivo CSV
     fs.createReadStream(file.path)
-        .pipe(csv({ separator: separador }))
-        .on("data", (row: CsvRow) => {
+        .pipe(csv({ 
+            separator: separador,
+            mapHeaders: ({ header }) => header.replace(/^["']|["']$/g, "").trim()
+        }))
+        .on("data", (row: any) => {
             registros.push(row);
         })
         .on("end", async () => {
@@ -82,28 +85,36 @@ router.post("/import", upload.fields([{ name: "file", maxCount: 1 }, { name: "eq
                 }
 
                 for (const row of registros) {
-                    const patrimonio = row.Patrimonio || row.patrimonio;
+                    const chaves = Object.keys(row);
+                    const chavePatrimonio = chaves.find(k => k.toLowerCase() === "patrimonio");
+                    
+                    const patrimonioCru = chavePatrimonio ? row[chavePatrimonio] : null;
+                    const patrimonio = limparTexto(patrimonioCru);
                     
                     if (!patrimonio) {
                         console.warn("⚠️ [IMPORT] Linha ignorada por ausência da coluna 'Patrimonio':", row);
                         continue;
                     }
 
-                    // Busca se o registro com o patrimônio fornecido já existe no banco
-                    let equipamento = await repo.findOneBy({ patrimonio: patrimonio.trim() });
+                    let equipamento = await repo.findOneBy({ patrimonio: patrimonio });
 
                     if (!equipamento) {
                         equipamento = new Equipamento();
                     }
 
-                    equipamento.patrimonio = patrimonio.trim();
-                    equipamento.tipo = row.Tipo || row.tipo || "Desktop";
-                    equipamento.marca = row.Marca || row.marca || "";
-                    equipamento.modelo = row.Modelo || row.modelo || "";
-                    equipamento.serialNumber = row.Serial || row.serial || row.serialNumber || "";
-                    equipamento.localizacao = row.Localizacao || row.localizacao || "Almoxarifado";
-                    equipamento.usuarioResponsavel = row.Usuario || row.usuario || row.usuarioResponsavel || "ALMOXARIFADO";
-                    equipamento.status = row.Status || row.status || "Offline";
+                    const acharValor = (nomes: string[]): string => {
+                        const chave = chaves.find(k => nomes.includes(k.toLowerCase()));
+                        return chave ? limparTexto(row[chave]) : "";
+                    };
+
+                    equipamento.patrimonio = patrimonio;
+                    equipamento.tipo = acharValor(["tipo"]) || "Desktop";
+                    equipamento.marca = acharValor(["marca"]);
+                    equipamento.modelo = acharValor(["modelo"]);
+                    equipamento.serialNumber = acharValor(["serial", "serialnumber"]);
+                    equipamento.localizacao = acharValor(["localizacao", "localização"]) || "Almoxarifado";
+                    equipamento.usuarioResponsavel = acharValor(["usuario", "usuário", "usuarioresponsavel"]) || "ALMOXARIFADO";
+                    equipamento.status = acharValor(["status"]) || "Offline";
 
                     await repo.save(equipamento);
                     criadosOuAtualizados += 1;
@@ -115,7 +126,7 @@ router.post("/import", upload.fields([{ name: "file", maxCount: 1 }, { name: "eq
                     return res.status(400).json({ message: "Nenhum equipamento válido pôde ser extraído do arquivo CSV. Verifique os cabeçalhos." });
                 }
 
-                console.log(`✅ [IMPORT] Sucesso! ${criadosOuAtualizados} ativos salvos no banco de dados.`);
+                console.log(`✅ [IMPORT] Sucesso! ${criadosOuAtualizados} ativos tratados e salvos.`);
                 return res.status(200).json({ 
                     message: `${criadosOuAtualizados} equipamentos processados e salvos com sucesso.` 
                 });
