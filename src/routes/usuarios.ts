@@ -6,7 +6,7 @@ import { ILike } from "typeorm";
 const router = Router();
 const repo = AppDataSource.getRepository(Usuario);
 
-// 🚀 LISTAR USUÁRIOS COM TODOS OS FILTROS TRATADOS CONTRA STRINGS VAZIAS
+// 🚀 LISTAR USUÁRIOS COM FILTROS TRATADOS CONTRA STRINGS VAZIAS
 router.get("/", async (req: Request, res: Response) => {
     try {
         const { nome, email, cargo, search } = req.query;
@@ -22,7 +22,6 @@ router.get("/", async (req: Request, res: Response) => {
             order: { nome: "ASC" }
         });
 
-        // Garante que a resposta seja sempre uma lista/array válido
         res.json(usuarios);
     } catch (error: any) {
         console.error("❌ Erro ao listar usuários no banco:", error);
@@ -30,10 +29,20 @@ router.get("/", async (req: Request, res: Response) => {
     }
 });
 
-// Criar novo usuário
+// Criar novo usuário - Abordagem direta com instância da classe
 router.post("/", async (req: Request, res: Response) => {
     try {
-        const novoUsuario = repo.create(req.body);
+        // Cria uma nova instância limpa do modelo Usuario
+        const novoUsuario = new Usuario();
+        
+        // Mescla as propriedades vindas do corpo da requisição de forma segura
+        repo.merge(novoUsuario, req.body);
+        
+        // Garante a atribuição correta do booleano de primeiro acesso
+        if (req.body.primeiroAcesso !== undefined) {
+            novoUsuario.primeiroAcesso = req.body.primeiroAcesso === true || req.body.primeiroAcesso === 'true';
+        }
+
         const salvo = await repo.save(novoUsuario);
         res.status(201).json(salvo);
     } catch (error: any) {
