@@ -107,18 +107,21 @@
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{"nome":"Luiz Ribeiro","cargo":"Administrador"}');
 
         function updateUserHeader() {
-            document.getElementById('userHeader').innerHTML = `
-                <i class="fas fa-bell text-2xl"></i>
-                <div>
-                    <p class="font-medium">${currentUser.nome}</p>
-                    <p class="text-sm text-gray-500">${currentUser.cargo}</p>
-                </div>
-            `;
+            const userHeader = document.getElementById('userHeader');
+            if (userHeader) {
+                userHeader.innerHTML = `
+                    <i class="fas fa-bell text-2xl"></i>
+                    <div>
+                        <p class="font-medium">${currentUser.nome}</p>
+                        <p class="text-sm text-gray-500">${currentUser.cargo}</p>
+                    </div>
+                `;
+            }
         }
 
         function showAdminButtons() {
             const container = document.getElementById('adminButtons');
-            if (currentUser.cargo === 'Administrador') {
+            if (container && currentUser.cargo === 'Administrador') {
                 container.innerHTML = `
                     <button onclick="exportarCSV()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-2xl font-medium flex items-center gap-2">
                         <i class="fas fa-download"></i> Exportar CSV
@@ -146,7 +149,13 @@
                 const res = await fetch(url);
                 const itens = await res.json();
 
-                document.getElementById('tabelaPerifericos').innerHTML = itens.map(i => `
+                const tabela = document.getElementById('tabelaPerifericos');
+                if (!tabela) {
+                    console.error("Elemento 'tabelaPerifericos' não encontrado no HTML!");
+                    return;
+                }
+
+                tabela.innerHTML = itens.map(i => `
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 font-medium">${i.tipo || '---'}</td>
                         <td class="px-6 py-4">${(i.marca || '')} ${(i.modelo || '')}</td>
