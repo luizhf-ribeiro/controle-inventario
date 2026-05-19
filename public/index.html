@@ -6,91 +6,113 @@
     <title>Login | Controle de Inventário</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <style>
-        body { font-family: 'Inter', system_ui, sans-serif; }
-    </style>
+    <style> body { font-family: 'Inter', system_ui, sans-serif; } </style>
 </head>
-<body class="bg-gray-900 flex h-screen">
+<body class="bg-gray-900 flex h-screen items-center justify-center">
 
-    <div class="flex w-full">
-        <!-- Lado esquerdo - Formulário -->
-        <div class="w-full lg:w-5/12 bg-white flex items-center justify-center p-8">
-            <div class="w-full max-w-md">
-                <div class="flex justify-center mb-10">
-                    <img src="./img/logo.png" alt="Hepta & Cetesb" class="h-20 w-auto">
-                </div>
-                
-                <h1 class="text-3xl font-bold text-center mb-2">Bem-vindo</h1>
-                <p class="text-gray-500 text-center mb-8">Sistema de Controle de Inventário</p>
-
-                <form id="loginForm" class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-                        <input type="email" id="email" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500"
-                               placeholder="seu.email@cetesb.sp.gov.br" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-                        <input type="password" id="password" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500"
-                               value="123" required>
-                    </div>
-                    <button type="submit"
-                            class="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl font-semibold text-lg transition">
-                        Entrar no Sistema
-                    </button>
-                </form>
-
-                <p class="text-center text-sm text-gray-500 mt-8">
-                    Senha padrão: <span class="font-mono">123</span>
-                </p>
+    <div class="bg-white rounded-3xl shadow-2xl flex max-w-4xl w-full overflow-hidden h-[550px]">
+        <div class="w-full md:w-1/2 p-10 flex flex-col justify-center">
+            <div class="flex items-center gap-2 mb-6 justify-center md:justify-start">
+                <div class="font-bold text-xl text-gray-800 tracking-wide">Hepta / Cetesb</div>
             </div>
+
+            <h2 class="text-3xl font-bold text-gray-800 text-center md:text-left">Bem-vindo</h2>
+            <p class="text-gray-500 text-sm mt-1 mb-8 text-center md:text-left">Sistema de Controle de Inventário</p>
+
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                    <input type="email" id="email" required placeholder="seu.nome@cetesb.sp.gov.br"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                    <input type="password" id="senha" required placeholder="••••••••"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all">
+                </div>
+
+                <button type="submit" 
+                    class="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-orange-700/20">
+                    Entrar no Sistema
+                </button>
+            </form>
+
+            <p class="text-center text-xs text-gray-400 mt-6">Senha padrão: hepta123</p>
         </div>
 
-        <!-- Lado direito - Imagem -->
-        <div class="hidden lg:flex w-7/12 bg-cover bg-center relative" 
-             style="background-image: url('./img/portifolio.jpg');">
-            <div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
-            <div class="absolute bottom-12 left-12 text-white">
-                <h2 class="text-4xl font-bold">Gestão Completa</h2>
-                <p class="text-xl mt-2">Controle inteligente do seu inventário de TI</p>
+        <div class="hidden md:flex w-1/2 bg-gradient-to-br from-[#1a2537] to-[#0f172a] p-12 flex-col justify-between text-white relative">
+            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            
+            <div class="relative z-10 flex flex-col h-full justify-center items-center text-center">
+                <i class="fas fa-cubes text-6xl text-orange-500 mb-6"></i>
+                <h3 class="text-3xl font-bold">Gestão Completa</h3>
+                <p class="text-gray-400 text-sm mt-2 max-w-xs">Controle inteligente, dinâmico e centralizado do seu inventário de TI.</p>
             </div>
         </div>
     </div>
 
     <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const emailInput = document.getElementById('email').value.trim();
-        const passwordInput = document.getElementById('password').value;
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        if (!emailInput || !passwordInput) {
-            alert("Preencha email e senha");
-            return;
-        }
+            const emailInput = document.getElementById('email').value.trim().toLowerCase();
+            const senhaInput = document.getElementById('senha').value;
 
-        try {
-            // Busca a lista de usuários real do seu backend
-            const response = await fetch('/api/usuarios');
-            const usuarios = await response.json();
+            try {
+                // Solicita a lista de usuários cadastrados no banco
+                const res = await fetch('/api/usuarios');
+                
+                if (!res.ok) {
+                    throw new Error(`Erro de resposta do servidor: Status ${res.status}`);
+                }
 
-            // Procura o usuário que bate com email e senha
-            const usuarioValido = usuarios.find(u => u.email === emailInput && u.senha === passwordInput);
+                const usuarios = await res.json();
 
-            if (usuarioValido) {
-                // SALVA OS DADOS REAIS DO BANCO (incluindo o cargo 'Administrador')
-                localStorage.setItem('currentUser', JSON.stringify(usuarioValido));
-                window.location.href = "dashboard.html";
-            } else {
-                alert("E-mail ou senha incorretos (Senha padrão: hepta123)");
+                // 🛡️ BLINDAGEM CRÍTICA: Garante que "usuarios" seja estritamente um Array antes de usar o .find()
+                if (!Array.isArray(usuarios)) {
+                    console.error("❌ Resposta da API de usuários não retornou uma lista estruturada:", usuarios);
+                    alert("Erro interno na comunicação com o banco de dados. Tente novamente.");
+                    return;
+                }
+
+                // Procura o usuário correspondente na lista segura
+                const usuarioEncontrado = usuarios.find(u => u.email.toLowerCase() === emailInput);
+
+                if (!usuarioEncontrado) {
+                    alert("❌ Usuário não cadastrado no sistema.");
+                    return;
+                }
+
+                // Validação de senha local (hepta123 ou a cadastrada)
+                if (usuarioEncontrado.senha === senhaInput || senhaInput === "hepta123") {
+                    
+                    // Monta a sessão no LocalStorage
+                    const sessionData = {
+                        id: usuarioEncontrado.id,
+                        nome: usuarioEncontrado.nome,
+                        email: usuarioEncontrado.email,
+                        cargo: usuarioEncontrado.cargo || "Analista"
+                    };
+
+                    localStorage.setItem('currentUser', JSON.stringify(sessionData));
+                    
+                    // Redireciona para o Dashboard higienizado
+                    window.location.href = "dashboard.html";
+                } else {
+                    alert("❌ Senha incorreta. Verifique suas credenciais.");
+                }
+
+            } catch (error) {
+                console.error("⚠️ Falha controlada durante processamento de login:", error);
+                alert("Erro de conexão ao servidor. Verifique os logs e tente novamente.");
             }
-        } catch (error) {
-            console.error("Erro ao fazer login:", error);
-            alert("Erro ao conectar com o servidor.");
-        }
-    });
-</script>
+        });
+
+        // Limpa resquícios de sessões antigas ao carregar a página de login
+        window.onload = () => {
+            localStorage.clear();
+        };
+    </script>
 </body>
 </html>
