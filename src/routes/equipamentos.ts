@@ -1,64 +1,140 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { AppDataSource } from "../data-source";
 import { Equipamento } from "../entities/Equipamento";
 import { ILike } from "typeorm";
+import multer from "multer";
+import csv from "csv-parser";
+import fs from "fs";
 
 const router = Router();
 const repo = AppDataSource.getRepository(Equipamento);
 
-// ====================== IMPORTAÇÃO CSV ======================
-router.post("/import", async (req, res) => {
+// Configuração do Multer para aceitar uploads temporários
+const upload = multer({ dest: "uploads/" });
+
+// Interface para mapeamento flexível das colunas do CSV
+interface CsvRow {
+    Patrimonio?: string;
+    patrimonio?: string;
+    Tipo?: string;
+    tipo?: string;
+    Marca?: string;
+    marca?: string;
+    Modelo?: string;
+    modelo?: string;
+    Serial?: string;
+    serial?: string;
+    serialNumber?: string;
+    Localizacao?: string;
+    localizacao?: string;
+    Usuario?: string;
+    usuario?: string;
+    usuarioResponsavel?: string;
+    Status?: string;
+    status?: string;
+}
+
+// 🚀 ROTA DE IMPORTAÇÃO: Aceita as chaves 'file' ou 'equipamentos' de forma flexível
+router.post("/import", upload.fields([{ name: "file", maxCount: 1 }, { name: "equipamentos", maxCount: 1 }]), async (req: Request, res: Response) => {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    
+    // Captura o arquivo independentemente de qual chave o frontend utilizou
+    const file = (files && files["file"] ? files["file"][0] : null) || 
+                 (files && files["equipamentos"] ? files["equipamentos"][0] : null);
+
+    if (!file) {
+        console.error("❌ [IMPORT] Nenhum arquivo processado pelo Multer.");
+        return res.status(400).json({ message: "Nenhum equipamento enviado para importação" });
+    }
+
+    console.log(`📂 [IMPORT] Arquivo recebido em produção: ${file.originalname}`);
+
+    const registros: CsvRow[] = [];
+    let separador = ",";
+
+    // Detecção automática de separador (Vírgula ou Ponto e Vírgula)
     try {
-        const equipamentos = req.body;
-
-        if (!Array.isArray(equipamentos) || equipamentos.length === 0) {
-            return res.status(400).json({ 
-                message: "Nenhum equipamento enviado para importação" 
-            });
+        const primeiraLinha = fs.readFileSync(file.path, "utf8").split("\n")[0];
+        if (primeiraLinha.includes(";")) {
+            separador = ";";
+            console.log("ℹ️ [IMPORT] Delimitador detectado: PONTO E VÍRGULA (;)");
+        } else {
+            console.log("ℹ️ [IMPORT] Delimitador detectado: VÍRGULA (,)");
         }
+    } catch (err) {
+        console.error("❌ [IMPORT] Falha ao analisar cabeçalho do arquivo:", err);
+    }
 
-        let importados = 0;
-        const errors: string[] = [];
-
-        for (const eq of equipamentos) {
+    // Processamento do fluxo do arquivo CSV
+    fs.createReadStream(file.path)
+        .pipe(csv({ separator: separador }))
+        .on("data", (row: CsvRow) => {
+            registros.push(row);
+        })
+        .on("end", async () => {
             try {
-                const novo = repo.create({
-                    patrimonio: eq.patrimonio?.trim(),
-                    tipo: eq.tipo?.trim(),
-                    marca: eq.marca?.trim(),
-                    modelo: eq.modelo?.trim(),
-                    serialNumber: eq.serialNumber?.trim(),
-                    localizacao: eq.localizacao?.trim(),
-                    status: eq.status?.trim() || 'Offline',
-                    usuarioResponsavel: eq.usuarioResponsavel?.trim()
+                let criadosOuAtualizados = 0;
+                console.log(`📊 [IMPORT] Total de linhas extraídas do CSV: ${registros.length}`);
+
+                if (registros.length === 0) {
+                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                    return res.status(400).json({ message: "O arquivo CSV está vazio ou possui formatação incompatível." });
+                }
+
+                for (const row of registros) {
+                    const patrimonio = row.Patrimonio || row.patrimonio;
+                    
+                    if (!patrimonio) {
+                        console.warn("⚠️ [IMPORT] Linha ignorada por ausência da coluna 'Patrimonio':", row);
+                        continue;
+                    }
+
+                    // Busca se o registro com o patrimônio fornecido já existe no banco
+                    let equipamento = await repo.findOneBy({ patrimonio: patrimonio.trim() });
+
+                    if (!equipamento) {
+                        equipamento = new Equipamento();
+                    }
+
+                    equipamento.patrimonio = patrimonio.trim();
+                    equipamento.tipo = row.Tipo || row.tipo || "Desktop";
+                    equipamento.marca = row.Marca || row.marca || "";
+                    equipamento.modelo = row.Modelo || row.modelo || "";
+                    equipamento.serialNumber = row.Serial || row.serial || row.serialNumber || "";
+                    equipamento.localizacao = row.Localizacao || row.localizacao || "Almoxarifado";
+                    equipamento.usuarioResponsavel = row.Usuario || row.usuario || row.usuarioResponsavel || "ALMOXARIFADO";
+                    equipamento.status = row.Status || row.status || "Offline";
+
+                    await repo.save(equipamento);
+                    criadosOuAtualizados += 1;
+                }
+
+                if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+
+                if (criadosOuAtualizados === 0) {
+                    return res.status(400).json({ message: "Nenhum equipamento válido pôde ser extraído do arquivo CSV. Verifique os cabeçalhos." });
+                }
+
+                console.log(`✅ [IMPORT] Sucesso! ${criadosOuAtualizados} ativos salvos no banco de dados.`);
+                return res.status(200).json({ 
+                    message: `${criadosOuAtualizados} equipamentos processados e salvos com sucesso.` 
                 });
 
-                await repo.save(novo);
-                importados++;
-            } catch (err: any) {
-                if (err.code === '23505') { // Unique violation (patrimônio duplicado)
-                    errors.push(`Patrimônio "${eq.patrimonio}" já existe no sistema.`);
-                } else {
-                    errors.push(`Erro ao importar "${eq.patrimonio || 'sem patrimônio'}": ${err.message}`);
-                }
+            } catch (error: any) {
+                if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                console.error("❌ [IMPORT] Erro interno durante salvamento no banco:", error);
+                return res.status(500).json({ message: "Erro ao processar e salvar dados no banco de dados.", error: error.message });
             }
-        }
-
-        res.json({
-            message: "Importação finalizada",
-            importados,
-            totalTentados: equipamentos.length,
-            erros: errors.length > 0 ? errors : undefined
+        })
+        .on("error", (error: Error) => {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            console.error("❌ [IMPORT] Falha crítica no Stream do CSV:", error);
+            return res.status(500).json({ message: "Falha crítica na leitura estrutural do arquivo CSV." });
         });
-
-    } catch (error) {
-        console.error("Erro na importação em lote:", error);
-        res.status(500).json({ message: "Erro interno ao processar importação" });
-    }
 });
 
-// Listar todos
-router.get("/", async (req, res) => {
+// Listar todos com filtros aplicados
+router.get("/", async (req: Request, res: Response) => {
     try {
         const { tipo, nome, status, search } = req.query;
         const where: any = {};
@@ -66,11 +142,11 @@ router.get("/", async (req, res) => {
         if (tipo) where.tipo = ILike(`%${tipo}%`);
         if (nome) where.usuarioResponsavel = ILike(`%${nome}%`);
         if (status) where.status = ILike(`%${status}%`);
-        if (search) where.tipo = ILike(`%${search}%`); // ou outro campo
+        if (search) where.tipo = ILike(`%${search}%`);
 
         const equipamentos = await repo.find({
             where: Object.keys(where).length > 0 ? where : undefined,
-            order: { dataCadastro: "DESC" }
+            order: { id: "DESC" }
         });
 
         res.json(equipamentos);
@@ -80,16 +156,16 @@ router.get("/", async (req, res) => {
     }
 });
 
-// Buscar por ID
-router.get("/:id", async (req, res) => {
+// Buscar por ID específico
+router.get("/:id", async (req: Request, res: Response) => {
     try {
         const id = parseInt(req.params.id);
         const equipamento = await repo.findOneBy({ id });
-        
+
         if (!equipamento) {
             return res.status(404).json({ message: "Equipamento não encontrado" });
         }
-        
+
         res.json(equipamento);
     } catch (error) {
         console.error("Erro ao buscar por ID:", error);
@@ -97,8 +173,8 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-// Criar
-router.post("/", async (req, res) => {
+// Criar manualmente
+router.post("/", async (req: Request, res: Response) => {
     try {
         const novo = repo.create(req.body);
         res.status(201).json(await repo.save(novo));
@@ -111,12 +187,12 @@ router.post("/", async (req, res) => {
     }
 });
 
-// Atualizar
-router.put("/:id", async (req, res) => {
+// Atualizar existente
+router.put("/:id", async (req: Request, res: Response) => {
     try {
         const id = parseInt(req.params.id);
         const item = await repo.findOneBy({ id });
-        
+
         if (!item) {
             return res.status(404).json({ message: "Equipamento não encontrado" });
         }
@@ -129,8 +205,8 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-// Deletar
-router.delete("/:id", async (req, res) => {
+// Remover do inventário
+router.delete("/:id", async (req: Request, res: Response) => {
     try {
         await repo.delete(parseInt(req.params.id));
         res.json({ success: true });

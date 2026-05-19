@@ -6,7 +6,7 @@
     <title>Equipamentos | Controle de Inventário</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <style> body { font-family: 'Inter', system_ui, sans-serif; } </style>
+    <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
 <body class="bg-gray-100 flex h-screen">
 
@@ -183,7 +183,7 @@
                     </tr>
                 `).join('');
             } catch (error) {
-                console.error("Erro ao carregar equipamentos:", error);
+                console.error("Erro ao carregar tabela de equipamentos:", error);
             }
         }
 
@@ -197,16 +197,18 @@
             console.log(`📂 Arquivo selecionado: ${file.name}`);
 
             if (!file.name.endsWith('.csv')) {
-                alert("❌ Selecione apenas arquivos .csv");
+                alert("❌ Selecione apenas arquivos estruturados em formato .csv");
                 input.value = '';
                 return;
             }
 
             const formData = new FormData();
+            // Duplica as chaves para garantir compatibilidade total com o upload do Multer
             formData.append('file', file);
+            formData.append('equipamentos', file);
 
             try {
-                console.log("🚀 Despachando payload para /api/equipamentos/import...");
+                console.log("🚀 Despachando payload multipart para /api/equipamentos/import...");
                 const response = await fetch('/api/equipamentos/import', {
                     method: 'POST',
                     body: formData
@@ -221,7 +223,7 @@
                     alert(`❌ Erro do Servidor: ${resultado.message}`);
                 }
             } catch (error) {
-                console.error("❌ Erro na requisição:", error);
+                console.error("❌ Falha de rede na requisição:", error);
                 alert("Erro de conexão ao processar importação.");
             } finally {
                 input.value = '';
@@ -294,7 +296,7 @@
         }
 
         async function excluir(id) {
-            if (confirm("Deseja excluir este equipamento?")) {
+            if (confirm("Deseja permanentemente excluir este equipamento do inventário?")) {
                 await fetch(`/api/equipamentos/${id}`, { method: 'DELETE' });
                 carregarTabela();
             }
