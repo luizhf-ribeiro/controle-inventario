@@ -6,7 +6,7 @@ import { ILike } from "typeorm";
 const router = Router();
 const repo = AppDataSource.getRepository(Usuario);
 
-// 🚀 LISTAR USUÁRIOS COM LOGS DETALHADOS DE ERRO DO POSTGRES
+// 🚀 LISTAR USUÁRIOS COM FILTROS TRATADOS CONTRA STRINGS VAZIAS
 router.get("/", async (req: Request, res: Response) => {
     try {
         const { nome, email, cargo, search } = req.query;
@@ -24,19 +24,12 @@ router.get("/", async (req: Request, res: Response) => {
 
         res.json(usuarios);
     } catch (error: any) {
-        // 🔥 CRÍTICO: Isso vai imprimir o erro exato do banco (ex: coluna inexistente) nos logs do Render
-        console.error("❌ [DATABASE ERROR] Falha crítica na query do Supabase:");
-        console.error(`Mensagem: ${error.message}`);
-        console.error(`Detalhes: ${JSON.stringify(error)}`);
-        
-        res.status(500).json({ 
-            message: "Erro interno ao buscar usuários na base de dados.", 
-            error: error.message 
-        });
+        console.error("❌ Erro ao listar usuários no banco:", error);
+        res.status(500).json({ message: "Erro ao buscar usuários", error: error.message });
     }
 });
 
-// Criar novo usuário
+// Criar novo usuário - Instanciação de classe direta homologada
 router.post("/", async (req: Request, res: Response) => {
     try {
         const novoUsuario = new Usuario();
@@ -49,7 +42,7 @@ router.post("/", async (req: Request, res: Response) => {
         const salvo = await repo.save(novoUsuario);
         res.status(201).json(salvo);
     } catch (error: any) {
-        console.error("❌ [DATABASE ERROR] Erro ao salvar usuário:", error.message);
+        console.error("❌ Erro ao cadastrar usuário:", error);
         res.status(500).json({ message: "Erro ao cadastrar usuário", error: error.message });
     }
 });
@@ -64,10 +57,10 @@ router.put("/:id", async (req: Request, res: Response) => {
             return res.status(404).json({ message: "Usuário não encontrado" });
         }
 
-        const atualizado = await repo.save(repo.merge(item, req.body));
-        res.json(atualizado);
+        const updated = await repo.save(repo.merge(item, req.body));
+        res.json(updated);
     } catch (error: any) {
-        console.error("❌ [DATABASE ERROR] Erro ao atualizar usuário:", error.message);
+        console.error("❌ Erro ao atualizar usuário:", error);
         res.status(500).json({ message: "Erro ao atualizar usuário", error: error.message });
     }
 });
@@ -79,7 +72,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
         await repo.delete(id);
         res.json({ success: true });
     } catch (error: any) {
-        console.error("❌ [DATABASE ERROR] Erro ao deletar usuário:", error.message);
+        console.error("❌ Erro ao deletar usuário:", error);
         res.status(500).json({ message: "Erro ao deletar usuário", error: error.message });
     }
 });
